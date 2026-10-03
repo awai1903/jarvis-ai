@@ -278,6 +278,42 @@ function toggle(){
 function begin(){if(begun)return;begun=true;setCaption('');auto=true;speak('Hello sir, welcome. How can I help you?')}
 if(navigator.userActivation&&navigator.userActivation.hasBeenActive)begin();
 else{setCaption('Tap anywhere to start');addEventListener('click',function go(e){removeEventListener('click',go,true);e.stopPropagation();e.preventDefault();begin()},true)}
+ /* ---------- 7 voices ---------- */
+var PRESETS=[
+ {n:'Juniper',g:'f',p:1.05,r:1},
+ {n:'Ember',g:'m',p:.9,r:1},
+ {n:'Cove',g:'m',p:.8,r:.97},
+ {n:'Sol',g:'f',p:1.15,r:1.03},
+ {n:'Breeze',g:'m',p:1.1,r:1.05},
+ {n:'Maple',g:'f',p:.95,r:.95},
+ {n:'Arbor',g:'m',p:1,r:1.02}];
+if(!PRESETS.some(function(x){return x.n===cfg.voice}))cfg.voice='Juniper';
+function pickVoice(g){
+ var all=speechSynthesis.getVoices(),pre=LANG.slice(0,2).toLowerCase(),
+  vs=all.filter(function(v){return v.lang.toLowerCase().indexOf(pre)===0});
+ if(!vs.length)return null;
+ var F=/female|zira|samantha|susan|hazel|aria|jenny|heera|karen|moira|tessa|fiona/i,
+  M=/male|david|daniel|george|mark|guy|ravi|alex|oliver|thomas|arthur/i;
+ var hit=vs.find(function(v){var f=F.test(v.name);return g==='f'?f:(!f&&M.test(v.name))});
+ return hit||vs[0];
+}
+function mkUtt(t){
+ var u=new SpeechSynthesisUtterance(t),p=PRESETS.find(function(x){return x.n===cfg.voice})||PRESETS[0],v=pickVoice(p.g);
+ u.lang=v?v.lang:LANG;if(v)u.voice=v;u.pitch=p.p;u.rate=p.r;return u;
+}
+function loadVoices(){}
+$('voice').innerHTML=PRESETS.map(function(p){return '<option value="'+p.n+'">'+p.n+'</option>'}).join('');
+$('voice').value=cfg.voice;
+var vl=document.createElement('div');vl.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px';
+function mark(){[].forEach.call(vl.children,function(b){var on=b.dataset.n===cfg.voice;b.style.background=on?'var(--accent)':'';b.style.borderColor=on?'var(--accent)':''})}
+PRESETS.forEach(function(p){
+ var b=document.createElement('button');b.className='pill';b.dataset.n=p.n;b.textContent=p.n;
+ b.onclick=function(){cfg.voice=p.n;$('voice').value=p.n;saveCfg();mark();stopSpeak();speechSynthesis.speak(mkUtt('How can I help you?'))};
+ vl.appendChild(b);
+});
+$('voice').style.display='none';$('voice').insertAdjacentElement('afterend',vl);mark();
+['pitch','rate'].forEach(function(i){$(i).style.display='none';document.querySelector('label[for='+i+']').style.display='none'});
+$('jarvis').style.display='none';
 /* ---------- Particle orb ---------- */
 var SP=[];for(var h=0;h<12;h++){var c=document.createElement('canvas');c.width=c.height=48;var g=c.getContext('2d');
  var gr=g.createRadialGradient(24,24,0,24,24,24);gr.addColorStop(0,'hsla('+h*30+',100%,92%,1)');gr.addColorStop(.25,'hsla('+h*30+',100%,72%,.55)');gr.addColorStop(1,'hsla('+h*30+',100%,60%,0)');
