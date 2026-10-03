@@ -7,7 +7,7 @@ A voice assistant with a particle orb. Tap the orb, speak, and it answers out lo
 2. Tap the gear icon and enter your API key, model name and voice language.
 3. Tap the orb and talk.
 
-Default provider is Grok (xAI). Any OpenAI-compatible service works by changing the API base URL and model.
+Default provider is Groq (model openai/gpt-oss-120b). Grok (xAI) also works with base URL https://api.x.ai/v1. Any OpenAI-compatible service works by changing the API base URL and model.
 
 ## Notes
 - Your API key is saved only in your own browser. It is never part of this code, so do not commit a key to this repo.
