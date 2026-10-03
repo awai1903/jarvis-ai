@@ -431,6 +431,29 @@ function drawP(){
 $('autosw').checked=cfg.auto;$('autosw').onchange=function(){cfg.auto=this.checked;saveCfg()};
 $('padd').onchange=function(){var v=this.value;if(!v)return;var pr=PRE[v];cfg.provs.push({name:v==='Custom'?'My API':v,base:pr[0],model:pr[1],key:'',role:'any'});this.value='';saveCfg();drawP()};
 drawP();
+ /* ---------- Manual voice mode (no auto on/off) ---------- */
+function again(){}
+var want=false;
+function endUI(){$('mic').classList.remove('rec');$('bar').classList.remove('rec');$('txt').placeholder=PH;if(state==='listening')setState('idle')}
+function stopDic(){want=false;if(dic){dic.onresult=null;try{dic.stop()}catch(e){}}}
+function runD(){
+ var d=new SR(),base=$('txt').value.trim(),fin='';base=base?base+' ':'';
+ d.lang=LANG;d.interimResults=true;d.continuous=true;dic=d;
+ d.onresult=function(e){var it='';for(var i=e.resultIndex;i<e.results.length;i++){var r=e.results[i];if(r.isFinal)fin+=r[0].transcript;else it+=r[0].transcript}$('txt').value=base+fin+it};
+ d.onerror=function(e){if(e.error!=='no-speech'&&e.error!=='aborted'){want=false;setCaption(e.error==='network'?'Speech recognition needs an internet connection.':'Microphone problem: '+e.error+'. Allow mic access or type instead.')}};
+ d.onend=function(){if(dic!==d)return;dic=null;if(want){setTimeout(function(){if(want&&!dic)runD()},150);return}endUI()};
+ try{d.start()}catch(e){dic=null;want=false;endUI()}
+}
+function dictate(){
+ if(want){want=false;if(dic){try{dic.stop()}catch(e){}}return}
+ if(!SR){setCaption('Voice input isn’t supported in this browser. Type your question instead.');return}
+ auto=false;stopSpeak();if(rec)stopListen();want=true;
+ $('mic').classList.add('rec');$('bar').classList.add('rec');$('txt').placeholder='Listening… speak now';
+ setState('listening');setCaption('');runD();
+}
+$('mic').onclick=dictate;
+orb.onclick=function(){if(state==='speaking'||state==='thinking'){toggle();return}dictate()};
+orb.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();orb.onclick()}};
 /* ---------- Particle orb ---------- */
 var SP=[];for(var h=0;h<12;h++){var c=document.createElement('canvas');c.width=c.height=48;var g=c.getContext('2d');
  var gr=g.createRadialGradient(24,24,0,24,24,24);gr.addColorStop(0,'hsla('+h*30+',100%,92%,1)');gr.addColorStop(.25,'hsla('+h*30+',100%,72%,.55)');gr.addColorStop(1,'hsla('+h*30+',100%,60%,0)');
