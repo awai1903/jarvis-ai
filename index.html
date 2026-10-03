@@ -559,6 +559,20 @@ body:not(.vmode) #vbar{display:none}
 #wave{background:#10b8a0;border:0;color:#fff}
 #wave:hover{filter:brightness(1.1)}
 `;document.head.appendChild(css2);
+ /* ---------- Center title ---------- */
+var hero=document.createElement('div');hero.id='hero';
+hero.innerHTML='<h1>Jarvis AI Assistant</h1><p>Ask anything · type, dictate or talk</p>';
+document.body.appendChild(hero);
+function freshCheck(){document.body.classList.toggle('fresh',!vm&&!chat.querySelector('.msg.user'))}
+setInterval(freshCheck,150);freshCheck();
+var css3=document.createElement('style');css3.textContent=`
+#hero{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 24px 80px;pointer-events:none;z-index:0}
+body.fresh #hero{display:flex;animation:pop .5s ease}
+#hero h1{margin:0;font-size:clamp(34px,9vw,64px);font-weight:800;letter-spacing:-.02em;line-height:1.05;background:linear-gradient(135deg,#ffffff 20%,#7fa8ff 60%,#b18cff);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 28px rgba(100,140,255,.35))}
+#hero p{margin:14px 0 0;font-size:15px;color:var(--dim);letter-spacing:.03em}
+body.fresh #chat .msg.assistant{display:none}
+#gear,#panel{z-index:5}
+`;document.head.appendChild(css3);
 /* ---------- Particle orb ---------- */
 var SP=[];for(var h=0;h<12;h++){var c=document.createElement('canvas');c.width=c.height=48;var g=c.getContext('2d');
  var gr=g.createRadialGradient(24,24,0,24,24,24);gr.addColorStop(0,'hsla('+h*30+',100%,92%,1)');gr.addColorStop(.25,'hsla('+h*30+',100%,72%,.55)');gr.addColorStop(1,'hsla('+h*30+',100%,60%,0)');
