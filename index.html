@@ -73,6 +73,10 @@ canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 <div id="panel" class="glass" hidden>
  <label for="lang">Voice language</label>
  <select id="lang" class="fld"><option value="">Browser default</option><option value="en-US">English</option><option value="ur-PK">اردو (Urdu)</option><option value="hi-IN">हिन्दी (Hindi)</option></select>
+ <label for="voice">Voice</label><select id="voice" class="fld"><option value="">Automatic</option></select>
+ <label for="pitch">Pitch (lower is deeper)</label><input id="pitch" class="fld" type="range" min="0.6" max="1.3" step="0.05" value="1" style="padding:0;border:0">
+ <label for="rate">Speed</label><input id="rate" class="fld" type="range" min="0.7" max="1.3" step="0.05" value="1.02" style="padding:0;border:0">
+ <button id="jarvis" class="pill" style="width:100%;margin-top:12px">Try Jarvis style voice</button>
  <label for="base">API base URL</label><input id="base" class="fld" type="url" autocomplete="off" spellcheck="false">
  <label for="model">Model</label><input id="model" class="fld" list="models" autocomplete="off" spellcheck="false"><datalist id="models"></datalist>
  <label for="key">API key</label><input id="key" class="fld" type="password" autocomplete="off" spellcheck="false" placeholder="gsk_...">
@@ -135,7 +139,7 @@ window.OrbAssistant.reply=function(t){show(t);speak(t)};
 var pend=0,streamDone=false;
 function say(t,id){
  if(!('speechSynthesis' in window))return;
- var u=new SpeechSynthesisUtterance(t);u.lang=LANG;u.rate=1.02;pend++;
+ var u=mkUtt(t);pend++;
  u.onboundary=function(){bump=1};
  u.onend=u.onerror=function(){if(id!==spk)return;pend--;if(pend<=0&&streamDone&&state==='speaking')setState('idle')};
  speechSynthesis.speak(u);
@@ -173,7 +177,7 @@ async function ask(text){
 }
 function speak(t){
  if(!('speechSynthesis' in window)||!t){setState('idle');return}
- var id=++spk,u=new SpeechSynthesisUtterance(t);u.lang=LANG;u.rate=1.02;
+ var id=++spk,u=mkUtt(t);
  u.onboundary=function(){bump=1};
  u.onend=u.onerror=function(){if(id===spk&&state==='speaking')setState('idle')};
  speechSynthesis.cancel();speechSynthesis.speak(u);setState('speaking');
@@ -206,13 +210,13 @@ function send(){var v=$('txt').value.trim();if(v){$('txt').value='';ask(v)}}
 $('send').onclick=send;$('txt').onkeydown=function(e){if(e.key==='Enter')send()};
 
 /* ---------- Settings (saved only in this browser) ---------- */
-var DEF={base:'https://api.groq.com/openai/v1',model:'openai/gpt-oss-120b',key:'',lang:''},cfg=Object.assign({},DEF);
+var DEF={base:'https://api.groq.com/openai/v1',model:'openai/gpt-oss-120b',key:'',lang:'',voice:'',pitch:1,rate:1.02},cfg=Object.assign({},DEF);
 try{Object.assign(cfg,JSON.parse(localStorage.getItem('orb.cfg')||'{}'))}catch(e){}
 LANG=cfg.lang||navigator.language||'en-US';
 function saveCfg(){try{localStorage.setItem('orb.cfg',JSON.stringify(cfg))}catch(e){}}
-function fillForm(){$('base').value=cfg.base;$('model').value=cfg.model;$('key').value=cfg.key;$('lang').value=cfg.lang;$('cstat').textContent='Version 6'}
+function fillForm(){$('base').value=cfg.base;$('model').value=cfg.model;$('key').value=cfg.key;$('lang').value=cfg.lang;$('voice').value=cfg.voice||'';$('pitch').value=cfg.pitch||1;$('rate').value=cfg.rate||1.02;$('cstat').textContent='Version 7'}
 $('gear').onclick=function(){$('panel').hidden=!$('panel').hidden;if(!$('panel').hidden)fillForm()};
-$('save').onclick=function(){cfg.base=$('base').value.trim()||DEF.base;cfg.model=$('model').value.trim()||DEF.model;cfg.key=$('key').value.trim();cfg.lang=$('lang').value;
+$('save').onclick=function(){cfg.base=$('base').value.trim()||DEF.base;cfg.model=$('model').value.trim()||DEF.model;cfg.key=$('key').value.trim();cfg.lang=$('lang').value;cfg.voice=$('voice').value;cfg.pitch=+$('pitch').value;cfg.rate=+$('rate').value;
  LANG=cfg.lang||navigator.language||'en-US';saveCfg();$('panel').hidden=true;setCaption(cfg.key?'Saved. Tap the orb and talk to me.':'No key set, so I’ll use simple built-in replies.')};
 $('clear').onclick=function(){cfg.key='';$('key').value='';saveCfg();$('cstat').textContent='Key removed from this browser.'};
 $('load').onclick=async function(){
@@ -223,6 +227,20 @@ $('load').onclick=async function(){
   (j.data||[]).forEach(function(m){if(m.id){var o=document.createElement('option');o.value=m.id;dl.appendChild(o)}});
   $('cstat').textContent=dl.children.length+' models found. Tap the Model box to pick one.'}
  catch(e){$('cstat').textContent='Couldn’t reach the server. Either there’s no internet, or this provider blocks requests made from a browser.'}
+};
+function mkUtt(t){var u=new SpeechSynthesisUtterance(t);u.lang=LANG;u.rate=cfg.rate||1.02;u.pitch=cfg.pitch||1;
+ if(cfg.voice){var v=speechSynthesis.getVoices().find(function(x){return x.name===cfg.voice});if(v){u.voice=v;u.lang=v.lang}}return u}
+function loadVoices(){if(!('speechSynthesis' in window))return;var sel=$('voice'),vs=speechSynthesis.getVoices();sel.innerHTML='<option value="">Automatic</option>';
+ vs.forEach(function(v){var o=document.createElement('option');o.value=v.name;o.textContent=v.name+' ('+v.lang+')';sel.appendChild(o)});sel.value=cfg.voice||''}
+if('speechSynthesis' in window){speechSynthesis.onvoiceschanged=loadVoices;loadVoices()}
+$('jarvis').onclick=function(){
+ if(!('speechSynthesis' in window))return;
+ var vs=speechSynthesis.getVoices(),gb=vs.filter(function(v){return /en[-_]GB/i.test(v.lang)}),
+  pick=gb.find(function(v){return /male|daniel|george|ryan|arthur|oliver|thomas/i.test(v.name)&&!/female/i.test(v.name)})||gb[0]||vs.find(function(v){return /^en/i.test(v.lang)&&/male/i.test(v.name)&&!/female/i.test(v.name)});
+ if(pick){cfg.voice=pick.name;$('voice').value=pick.name}
+ cfg.pitch=.85;cfg.rate=.95;$('pitch').value=.85;$('rate').value=.95;saveCfg();
+ stopSpeak();speechSynthesis.speak(mkUtt('Good evening. All systems are online. How may I assist you?'));
+ $('cstat').textContent=pick?'Voice set to '+pick.name+'.':'No British male voice found on this device. Pick one from the Voice list.';
 };
 if(!cfg.key)setCaption('Tap the gear and add your API key. Until then I use simple built-in replies.');
 globalThis.hist=hist;greet();
