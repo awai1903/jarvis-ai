@@ -472,6 +472,93 @@ function runD(){
  d.onend=function(){if(dic!==d)return;dic=null;if(want){setTimeout(function(){if(want&&!dic)runD()},200);return}endUI()};
  try{d.start()}catch(e){dic=null;want=false;endUI()}
       }
+ /* ---------- ChatGPT-style bar + orb voice mode ---------- */
+document.body.classList.add('chatonly');
+var vm=false,vmRec=null,vmTxt='',vmT=null,greeted=false;
+function begin(){}
+function greet(){addMsg('assistant','Hi! Type below, tap the mic to dictate, or tap the wave button for a voice chat.')}
+function mergeRes(e){
+ var out=[];
+ for(var i=0;i<e.results.length;i++){
+  var t=e.results[i][0].transcript.trim();if(!t)continue;
+  var l=out.length?out[out.length-1]:'';
+  if(l&&t.toLowerCase().indexOf(l.toLowerCase())===0)out[out.length-1]=t;else out.push(t);
+ }
+ return out.join(' ');
+}
+function setState(s){
+ var p=state;state=s;
+ $('state').textContent=LABEL[s];$('mic').classList.toggle('on',s==='listening');
+ $('mic').setAttribute('aria-label',s==='listening'?'Stop listening':'Start listening');
+ if(vm&&s==='idle'&&(p==='speaking'||p==='thinking'))setTimeout(vmListen,700);
+}
+function killVm(){clearTimeout(vmT);if(vmRec){var r=vmRec;vmRec=null;r.onresult=r.onend=r.onerror=null;try{r.abort()}catch(e){}}}
+function runVm(){
+ var r=new SR(),base=vmTxt?vmTxt+' ':'';
+ r.lang=LANG;r.interimResults=true;r.continuous=false;vmRec=r;
+ r.onresult=function(e){var t=mergeRes(e);if(!t)return;vmTxt=(base+t).trim();
+  if(!liveEl){liveEl=addMsg('user','');liveEl.classList.add('live')}
+  liveEl.textContent=vmTxt;scrollEnd();
+  clearTimeout(vmT);vmT=setTimeout(vmSend,3000)};
+ r.onerror=function(e){if(e.error!=='no-speech'&&e.error!=='aborted')vmEnd(e.error==='network'?'Speech recognition needs an internet connection.':'Microphone problem: '+e.error+'. Allow mic access or type instead.')};
+ r.onend=function(){if(vmRec!==r)return;vmRec=null;if(vm&&state==='listening')setTimeout(function(){if(vm&&state==='listening'&&!vmRec)runVm()},150)};
+ try{r.start()}catch(e){vmRec=null}
+}
+function vmListen(){if(!vm||state!=='idle'||vmRec)return;vmTxt='';setState('listening');setCaption('Listening…');runVm()}
+function vmSend(){var t=vmTxt.trim();vmTxt='';killVm();if(t)ask(t)}
+function vmStart(){
+ if(vm)return;
+ if(!SR){setCaption('Voice input isn’t supported in this browser. Type your question instead.');return}
+ if(typeof stopDic==='function')stopDic();
+ vm=true;stopSpeak();setState('idle');
+ document.body.classList.remove('chatonly');document.body.classList.add('vmode');
+ window.dispatchEvent(new Event('resize'));setCaption('');
+ if(!greeted&&('speechSynthesis' in window)){greeted=true;speak('Hello sir, welcome. How can I help you?')}
+ else setTimeout(vmListen,300);
+}
+function vmEnd(msg){
+ vm=false;killVm();dropLive();clearTimeout(thinkT);if(aborter)aborter.abort();stopSpeak();
+ if(cur&&cur.classList.contains('typing'))cur.remove();
+ document.body.classList.remove('vmode');document.body.classList.add('chatonly');
+ setState('idle');setCaption(msg||'');
+}
+orb.onclick=function(){if(state==='speaking'||state==='thinking'){var c=cur;toggle();if(c&&c.classList.contains('typing'))c.remove()}};
+orb.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();orb.onclick()}};
+
+/* wave button + voice bar */
+var wv=document.createElement('button');wv.id='wave';wv.className='btn';wv.setAttribute('aria-label','Start voice chat');
+wv.innerHTML='<svg viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/></svg>';
+$('send').insertAdjacentElement('beforebegin',wv);wv.onclick=vmStart;
+var vb=document.createElement('div');vb.id='vbar';
+vb.innerHTML='<button id="vend" class="btn" aria-label="End voice chat"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div class="note" style="margin:0;text-align:center">Speak, then pause for 3 seconds. Tap the orb to interrupt.</div>';
+$('bar').insertAdjacentElement('afterend',vb);$('vend').onclick=function(){vmEnd()};
+PH='Ask anything';$('txt').placeholder=PH;
+function sync(){var has=$('txt').value.trim().length>0;$('send').style.display=has?'grid':'none';wv.style.display=has?'none':'grid'}
+setInterval(sync,150);sync();
+
+/* save battery while orb is hidden */
+var _raf=window.requestAnimationFrame.bind(window);
+window.requestAnimationFrame=function(cb){return vm?_raf(cb):setTimeout(function(){_raf(cb)},300)};
+
+/* cancel the old "tap anywhere to start" overlay */
+setTimeout(function(){window.dispatchEvent(new Event('click'));if($('caption').textContent==='Tap anywhere to start')setCaption('')},0);
+
+var css2=document.createElement('style');css2.textContent=`
+body.chatonly #stage{visibility:hidden}
+body.chatonly #spacer{display:none}
+body.vmode #bar{display:none}
+body:not(.vmode) #vbar{display:none}
+#vbar{display:flex;flex-direction:column;align-items:center;gap:10px;padding:4px 0}
+#vend{width:64px;height:64px;background:#ff4d6a;border:0;color:#fff}
+#vend svg{width:26px;height:26px}
+#bar{flex-wrap:wrap;border-radius:28px;padding:14px 14px 10px;gap:6px}
+#txt{flex:1 1 100%;order:0;padding:4px 6px 12px;font-size:17px}
+#mic{order:2;margin-left:auto;background:transparent;border:0}
+#mic:hover{background:rgba(255,255,255,.08)}
+#wave,#send{order:3}
+#wave{background:#10b8a0;border:0;color:#fff}
+#wave:hover{filter:brightness(1.1)}
+`;document.head.appendChild(css2);
 /* ---------- Particle orb ---------- */
 var SP=[];for(var h=0;h<12;h++){var c=document.createElement('canvas');c.width=c.height=48;var g=c.getContext('2d');
  var gr=g.createRadialGradient(24,24,0,24,24,24);gr.addColorStop(0,'hsla('+h*30+',100%,92%,1)');gr.addColorStop(.25,'hsla('+h*30+',100%,72%,.55)');gr.addColorStop(1,'hsla('+h*30+',100%,60%,0)');
