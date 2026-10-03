@@ -62,8 +62,8 @@ canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
  <select id="lang" class="fld"><option value="">Browser default</option><option value="en-US">English</option><option value="ur-PK">اردو (Urdu)</option><option value="hi-IN">हिन्दी (Hindi)</option></select>
  <label for="base">API base URL</label><input id="base" class="fld" type="url" autocomplete="off" spellcheck="false">
  <label for="model">Model</label><input id="model" class="fld" list="models" autocomplete="off" spellcheck="false"><datalist id="models"></datalist>
- <label for="key">API key</label><input id="key" class="fld" type="password" autocomplete="off" spellcheck="false" placeholder="xai-...">
- <p class="note">Default is Grok (xAI). Any OpenAI-compatible service works. Your key is saved only in this browser.</p>
+ <label for="key">API key</label><input id="key" class="fld" type="password" autocomplete="off" spellcheck="false" placeholder="gsk_...">
+ <p class="note">Default is Groq. Any OpenAI-compatible service works (for Grok use https://api.x.ai/v1). Your key is saved only in this browser.</p>
  <div class="row"><button id="save" class="pill">Save</button><button id="load" class="pill">Load models</button><button id="clear" class="pill">Clear key</button></div>
  <p id="cstat" class="note" aria-live="polite"></p>
 </div>
@@ -111,19 +111,41 @@ function brain(raw){
  return 'I heard “'+raw.trim()+'”, but I don’t know how to answer that yet. Say help to hear what I can do.';
 }
 function fail(m){setState('idle');setCaption(m)}
+var pend=0,streamDone=false;
+function say(t,id){
+ if(!('speechSynthesis' in window))return;
+ var u=new SpeechSynthesisUtterance(t);u.lang=LANG;u.rate=1.02;pend++;
+ u.onboundary=function(){bump=1};
+ u.onend=u.onerror=function(){if(id!==spk)return;pend--;if(pend<=0&&streamDone&&state==='speaking')setState('idle')};
+ speechSynthesis.speak(u);
+}
 async function ask(text){
  stopListen();stopSpeak();clearTimeout(thinkT);if(aborter)aborter.abort();setState('thinking');setCaption('“'+text+'”');
  if(window.OrbAssistant.onSend){window.OrbAssistant.onSend(text);return}
  if(!cfg.key){thinkT=setTimeout(function(){var r=brain(text);setCaption(r);speak(r)},700);return}
  aborter=new AbortController();
+ var id=spk,full='',sb='',started=false;pend=0;streamDone=false;
+ function piece(s){if(!started){started=true;setState('speaking')}say(s,id)}
+ function flush(last){var m;while(m=sb.match(/^[\s\S]*?(?:[.!?۔؟](?=\s|$)|\n)/)){var s=m[0].trim();sb=sb.slice(m[0].length);if(s)piece(s)}if(last&&sb.trim()){piece(sb.trim());sb=''}}
  var msgs=[{role:'system',content:INSTR}].concat(hist.slice(-10),[{role:'user',content:text}]);
  try{
   var res=await fetch(cfg.base.replace(/\/+$/,'')+'/chat/completions',{method:'POST',signal:aborter.signal,headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.key},
-   body:JSON.stringify({model:cfg.model,messages:msgs,max_tokens:220,temperature:.7})});
-  if(!res.ok){var st=res.status;return fail(st===401||st===403?'The API key was rejected. Check it in settings.':st===404?'Model not found. Check the model name in settings.':st===429?'Rate limit reached or no credit left. Check your provider account.':'The API returned an error ('+st+').')}
-  var j=await res.json(),r=((j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'').trim();
-  if(!r)return fail('I got an empty reply. Try again.');
-  hist.push({role:'user',content:text},{role:'assistant',content:r});setCaption(r);speak(r);
+   body:JSON.stringify({model:cfg.model,messages:msgs,max_tokens:400,temperature:.7,stream:true})});
+  if(!res.ok){var st=res.status,em='';try{var ej=await res.json();em=String((ej.error&&ej.error.message)||ej.error||'').slice(0,180)}catch(e){}
+   return fail((st===401||st===403?'The API key was rejected. Check it in settings.':st===404?'Model not found. Check the model name in settings.':st===429?'Rate limit reached or no credit left. Check your provider account.':'The API returned an error ('+st+').')+(em?' '+em:''))}
+  var rd=res.body.getReader(),dec=new TextDecoder(),buf='';
+  while(true){
+   var ch=await rd.read();if(ch.done)break;
+   buf+=dec.decode(ch.value,{stream:true});var lines=buf.split('\n');buf=lines.pop();
+   for(var i=0;i<lines.length;i++){
+    var ln=lines[i].trim();if(ln.indexOf('data:')!==0)continue;var d=ln.slice(5).trim();if(d==='[DONE]')continue;
+    try{var c=JSON.parse(d).choices[0].delta.content;if(c){full+=c;sb+=c;setCaption(full.trim());flush(false)}}catch(e){}
+   }
+  }
+  full=full.trim();
+  if(!full)return fail('I got an empty reply. Try again.');
+  flush(true);streamDone=true;hist.push({role:'user',content:text},{role:'assistant',content:full});
+  if(!started||pend<=0)setState('idle');
  }catch(e){if(e&&e.name==='AbortError')return;fail('I couldn’t reach the API. Check your internet, key and base URL. Some providers block browser requests.')}
 }
 function speak(t){
@@ -161,11 +183,11 @@ function send(){var v=$('txt').value.trim();if(v){$('txt').value='';ask(v)}}
 $('send').onclick=send;$('txt').onkeydown=function(e){if(e.key==='Enter')send()};
 
 /* ---------- Settings (saved only in this browser) ---------- */
-var DEF={base:'https://api.x.ai/v1',model:'grok-4',key:'',lang:''},cfg=Object.assign({},DEF);
+var DEF={base:'https://api.groq.com/openai/v1',model:'openai/gpt-oss-120b',key:'',lang:''},cfg=Object.assign({},DEF);
 try{Object.assign(cfg,JSON.parse(localStorage.getItem('orb.cfg')||'{}'))}catch(e){}
 LANG=cfg.lang||navigator.language||'en-US';
 function saveCfg(){try{localStorage.setItem('orb.cfg',JSON.stringify(cfg))}catch(e){}}
-function fillForm(){$('base').value=cfg.base;$('model').value=cfg.model;$('key').value=cfg.key;$('lang').value=cfg.lang;$('cstat').textContent='Version 3'}
+function fillForm(){$('base').value=cfg.base;$('model').value=cfg.model;$('key').value=cfg.key;$('lang').value=cfg.lang;$('cstat').textContent='Version 5'}
 $('gear').onclick=function(){$('panel').hidden=!$('panel').hidden;if(!$('panel').hidden)fillForm()};
 $('save').onclick=function(){cfg.base=$('base').value.trim()||DEF.base;cfg.model=$('model').value.trim()||DEF.model;cfg.key=$('key').value.trim();cfg.lang=$('lang').value;
  LANG=cfg.lang||navigator.language||'en-US';saveCfg();$('panel').hidden=true;setCaption(cfg.key?'Saved. Tap the orb and talk to me.':'No key set, so I’ll use simple built-in replies.')};
@@ -208,18 +230,4 @@ function frame(now){
  var tl=.38+.05*Math.sin(now/2600),cs=Math.cos(spin),sn=Math.sin(spin),ct=Math.cos(tl),st=Math.sin(tl),hue0=now/60+S.think*70;
  for(var i=0;i<N;i++){
   var p=P[i],x=p.x*cs+p.z*sn,z=-p.x*sn+p.z*cs,y2=p.y*ct-z*st,z2=p.y*st+z*ct;
-  var wave=1+(.02+.05*lvl)*act*Math.sin(p.y*3.2-now/420)+.01*Math.sin(p.ph+now/1100);
-  var k=R*wave*(1+z2*.1),depth=(z2+1)/2;
-  var a=(.2+.8*depth)*(p.core?.55:1)*(.75+.25*act),rad=p.s*(1.1+depth*1.1)*(1+.3*act+.2*lvl)*3;
-  var hb=Math.floor((((190+hue0+y2*70+depth*60)%360)+360)%360/30)%12;
-  ctx.globalAlpha=Math.min(a,1);ctx.drawImage(SP[hb],cx+x*k-rad,CY+y2*k-rad,rad*2,rad*2);
- }
- ctx.globalCompositeOperation='source-over';
- if(act>.05){ctx.globalAlpha=Math.min(.5,(.12+.45*lvl)*act);ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(cx,CY,R0*(1.3+.25*lvl)*(1+.1*act),0,6.283);ctx.stroke()}
- ctx.globalAlpha=1;requestAnimationFrame(frame);
-}
-requestAnimationFrame(frame);
-})();
-</script>
-</body>
-</html>
+  var wave=1+(.02+.05*lvl)*act*Math.sin(p.y*3.2-no
