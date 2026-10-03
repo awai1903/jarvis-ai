@@ -165,7 +165,7 @@ var DEF={base:'https://api.x.ai/v1',model:'grok-4',key:'',lang:''},cfg=Object.as
 try{Object.assign(cfg,JSON.parse(localStorage.getItem('orb.cfg')||'{}'))}catch(e){}
 LANG=cfg.lang||navigator.language||'en-US';
 function saveCfg(){try{localStorage.setItem('orb.cfg',JSON.stringify(cfg))}catch(e){}}
-function fillForm(){$('base').value=cfg.base;$('model').value=cfg.model;$('key').value=cfg.key;$('lang').value=cfg.lang;$('cstat').textContent=''}
+function fillForm(){$('base').value=cfg.base;$('model').value=cfg.model;$('key').value=cfg.key;$('lang').value=cfg.lang;$('cstat').textContent='Version 3'}
 $('gear').onclick=function(){$('panel').hidden=!$('panel').hidden;if(!$('panel').hidden)fillForm()};
 $('save').onclick=function(){cfg.base=$('base').value.trim()||DEF.base;cfg.model=$('model').value.trim()||DEF.model;cfg.key=$('key').value.trim();cfg.lang=$('lang').value;
  LANG=cfg.lang||navigator.language||'en-US';saveCfg();$('panel').hidden=true;setCaption(cfg.key?'Saved. Tap the orb and talk to me.':'No key set, so I’ll use simple built-in replies.')};
