@@ -454,6 +454,24 @@ function dictate(){
 $('mic').onclick=dictate;
 orb.onclick=function(){if(state==='speaking'||state==='thinking'){toggle();return}dictate()};
 orb.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();orb.onclick()}};
+ /* ---------- Fix: duplicate words in dictation ---------- */
+function mergeRes(e){
+ var out=[];
+ for(var i=0;i<e.results.length;i++){
+  var t=e.results[i][0].transcript.trim();if(!t)continue;
+  var l=out.length?out[out.length-1]:'';
+  if(l&&t.toLowerCase().indexOf(l.toLowerCase())===0)out[out.length-1]=t;else out.push(t);
+ }
+ return out.join(' ');
+}
+function runD(){
+ var d=new SR(),base=$('txt').value.trim();base=base?base+' ':'';
+ d.lang=LANG;d.interimResults=true;d.continuous=false;dic=d;
+ d.onresult=function(e){$('txt').value=base+mergeRes(e)};
+ d.onerror=function(e){if(e.error!=='no-speech'&&e.error!=='aborted'){want=false;setCaption(e.error==='network'?'Speech recognition needs an internet connection.':'Microphone problem: '+e.error+'. Allow mic access or type instead.')}};
+ d.onend=function(){if(dic!==d)return;dic=null;if(want){setTimeout(function(){if(want&&!dic)runD()},200);return}endUI()};
+ try{d.start()}catch(e){dic=null;want=false;endUI()}
+      }
 /* ---------- Particle orb ---------- */
 var SP=[];for(var h=0;h<12;h++){var c=document.createElement('canvas');c.width=c.height=48;var g=c.getContext('2d');
  var gr=g.createRadialGradient(24,24,0,24,24,24);gr.addColorStop(0,'hsla('+h*30+',100%,92%,1)');gr.addColorStop(.25,'hsla('+h*30+',100%,72%,.55)');gr.addColorStop(1,'hsla('+h*30+',100%,60%,0)');
