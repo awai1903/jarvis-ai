@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>Orb Assistant</title>
 <style>
 :root{--bg:#0a0c14;--surf:#151927;--surf2:#1f2538;--line:#2a3045;--fg:#eef1fa;--dim:#8d96ad;--accent:#4f8cff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -15,9 +15,19 @@ html,body{height:100%;margin:0;background:var(--bg);overflow:hidden;font-family:
 #halo{background:radial-gradient(circle,rgba(90,150,255,.30),rgba(90,150,255,.08) 45%,rgba(0,0,0,0) 70%)}
 #orb{background:transparent;border:0;cursor:pointer}
 canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-#dock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(22px + env(safe-area-inset-bottom,0px));width:min(560px,calc(100% - 32px));text-align:center}
-#state{font-size:13px;letter-spacing:.05em;color:var(--dim);margin-bottom:6px}
-#caption{min-height:44px;font-size:17px;line-height:1.4;margin:0 auto 16px;max-width:30em;text-wrap:balance}
+#app{position:fixed;inset:0;display:flex;flex-direction:column;pointer-events:none}
+#spacer{flex:none;display:flex;align-items:flex-end;justify-content:center}
+#chat,#dock{pointer-events:auto}
+#chat{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;width:min(640px,calc(100% - 24px));margin:0 auto;padding:14px 4px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;-webkit-mask-image:linear-gradient(transparent,#000 22px);mask-image:linear-gradient(transparent,#000 22px)}
+.msg{max-width:88%;font-size:16px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.user{align-self:flex-end;background:var(--surf2);border:1px solid var(--line);padding:10px 14px;border-radius:18px 18px 4px 18px}
+.msg.user.live{opacity:.65}
+.msg.assistant{align-self:flex-start;padding:2px 4px}
+.msg.typing{color:var(--dim)}
+.msg.err{color:#ff9aa8}
+#dock{flex:none;width:min(640px,calc(100% - 24px));margin:0 auto;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+#state{font-size:13px;letter-spacing:.05em;color:var(--dim);padding-bottom:2px}
+#caption{min-height:18px;font-size:13px;line-height:1.35;color:var(--dim);text-align:center;margin:2px 0 8px}
 .glass{background:var(--surf);border:1px solid var(--line)}
 #bar{display:flex;align-items:center;gap:8px;padding:8px;border-radius:999px}
 #txt{flex:1;min-width:0;background:transparent;border:0;outline:0;color:var(--fg);font-size:16px;padding:8px 6px 8px 14px}
@@ -47,14 +57,17 @@ canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
  <div id="orb" class="abs" role="button" tabindex="0" aria-label="Talk to assistant"></div>
  <canvas id="c"></canvas>
 </div>
-<div id="dock">
- <div id="state" aria-live="polite">Ready</div>
- <p id="caption">Tap the orb and say hello. Try “what time is it?”</p>
- <div id="bar" class="glass">
+<div id="app">
+ <div id="spacer"><div id="state" aria-live="polite">Ready</div></div>
+ <div id="chat" aria-live="polite"></div>
+ <div id="dock">
+  <p id="caption"></p>
+  <div id="bar" class="glass">
   <input id="txt" type="text" placeholder="Ask me anything" aria-label="Message" autocomplete="off">
   <button id="send" class="btn" aria-label="Send"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
   <button id="mic" class="btn" aria-label="Start listening"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
  </div>
+</div>
 </div>
 <button id="gear" class="btn glass" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
 <div id="panel" class="glass" hidden>
@@ -65,6 +78,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
  <label for="key">API key</label><input id="key" class="fld" type="password" autocomplete="off" spellcheck="false" placeholder="gsk_...">
  <p class="note">Default is Groq. Any OpenAI-compatible service works (for Grok use https://api.x.ai/v1). Your key is saved only in this browser.</p>
  <div class="row"><button id="save" class="pill">Save</button><button id="load" class="pill">Load models</button><button id="clear" class="pill">Clear key</button></div>
+ <button id="newchat" class="pill" style="width:100%;margin-top:10px">New chat</button>
  <p id="cstat" class="note" aria-live="polite"></p>
 </div>
 <script>
@@ -73,7 +87,7 @@ var $=function(i){return document.getElementById(i)};
 var cv=$('c'),ctx=cv.getContext('2d'),orb=$('orb'),halo=$('halo'),floor=$('floor'),W,H,dpr,R0,CY;
 function place(el,w,h,dy){el.style.width=w+'px';el.style.height=h+'px';el.style.marginLeft=-w/2+'px';el.style.marginTop=(-h/2+dy)+'px'}
 function size(){dpr=Math.min(devicePixelRatio||1,2);W=cv.clientWidth;H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
- R0=Math.min(W*.24,H*.19);CY=H*.36;var dy=CY-H/2;
+ R0=Math.min(W*.2,H*.11);var topH=Math.round(R0*3.3);CY=topH*.47;$('spacer').style.height=topH+'px';var dy=CY-H/2;
  place(orb,R0*2.5,R0*2.5,dy);place(halo,R0*5,R0*5,dy);place(floor,R0*2.6,R0*.5,dy+R0*1.55)}
 size();addEventListener('resize',size);
 
@@ -110,7 +124,14 @@ function brain(raw){
  if(/\b(hi|hello|hey|salam|assalam)\b/.test(t))return 'Hello'+(uname?', '+uname:'')+'! How can I help you?';
  return 'I heard “'+raw.trim()+'”, but I don’t know how to answer that yet. Say help to hear what I can do.';
 }
-function fail(m){setState('idle');setCaption(m)}
+var chat=$('chat'),liveEl=null,cur=null;
+function scrollEnd(){chat.scrollTop=chat.scrollHeight}
+function addMsg(role,text){var d=document.createElement('div');d.className='msg '+role;d.textContent=text;chat.appendChild(d);scrollEnd();return d}
+function dropLive(){if(liveEl){liveEl.remove();liveEl=null}}
+function greet(){addMsg('assistant','Hi! Tap the orb and speak, or type below.')}
+function show(t,el){el=el||cur;if(!el)return;el.classList.remove('typing');el.textContent=t;scrollEnd()}
+function fail(m,el){el=el||cur;setState('idle');if(el&&el.classList.contains('typing')){show(m,el);el.classList.add('err')}else setCaption(m)}
+window.OrbAssistant.reply=function(t){show(t);speak(t)};
 var pend=0,streamDone=false;
 function say(t,id){
  if(!('speechSynthesis' in window))return;
@@ -120,9 +141,11 @@ function say(t,id){
  speechSynthesis.speak(u);
 }
 async function ask(text){
- stopListen();stopSpeak();clearTimeout(thinkT);if(aborter)aborter.abort();setState('thinking');setCaption('“'+text+'”');
+ stopListen();stopSpeak();clearTimeout(thinkT);if(aborter)aborter.abort();setCaption('');setState('thinking');
+ if(liveEl){liveEl.textContent=text;liveEl.classList.remove('live');liveEl=null}else addMsg('user',text);
+ var el=cur=addMsg('assistant','…');el.classList.add('typing');
  if(window.OrbAssistant.onSend){window.OrbAssistant.onSend(text);return}
- if(!cfg.key){thinkT=setTimeout(function(){var r=brain(text);setCaption(r);speak(r)},700);return}
+ if(!cfg.key){thinkT=setTimeout(function(){var r=brain(text);show(r,el);speak(r)},700);return}
  aborter=new AbortController();
  var id=spk,full='',sb='',started=false;pend=0;streamDone=false;
  function piece(s){if(!started){started=true;setState('speaking')}say(s,id)}
@@ -132,21 +155,21 @@ async function ask(text){
   var res=await fetch(cfg.base.replace(/\/+$/,'')+'/chat/completions',{method:'POST',signal:aborter.signal,headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.key},
    body:JSON.stringify({model:cfg.model,messages:msgs,max_tokens:400,temperature:.7,stream:true})});
   if(!res.ok){var st=res.status,em='';try{var ej=await res.json();em=String((ej.error&&ej.error.message)||ej.error||'').slice(0,180)}catch(e){}
-   return fail((st===401||st===403?'The API key was rejected. Check it in settings.':st===404?'Model not found. Check the model name in settings.':st===429?'Rate limit reached or no credit left. Check your provider account.':'The API returned an error ('+st+').')+(em?' '+em:''))}
+   return fail((st===401||st===403?'The API key was rejected. Check it in settings.':st===404?'Model not found. Check the model name in settings.':st===429?'Rate limit reached or no credit left. Check your provider account.':'The API returned an error ('+st+').')+(em?' '+em:''),el)}
   var rd=res.body.getReader(),dec=new TextDecoder(),buf='';
   while(true){
    var ch=await rd.read();if(ch.done)break;
    buf+=dec.decode(ch.value,{stream:true});var lines=buf.split('\n');buf=lines.pop();
    for(var i=0;i<lines.length;i++){
     var ln=lines[i].trim();if(ln.indexOf('data:')!==0)continue;var d=ln.slice(5).trim();if(d==='[DONE]')continue;
-    try{var c=JSON.parse(d).choices[0].delta.content;if(c){full+=c;sb+=c;setCaption(full.trim());flush(false)}}catch(e){}
+    try{var c=JSON.parse(d).choices[0].delta.content;if(c){full+=c;sb+=c;show(full.trim(),el);flush(false)}}catch(e){}
    }
   }
   full=full.trim();
-  if(!full)return fail('I got an empty reply. Try again.');
+  if(!full)return fail('I got an empty reply. Try again.',el);
   flush(true);streamDone=true;hist.push({role:'user',content:text},{role:'assistant',content:full});
   if(!started||pend<=0)setState('idle');
- }catch(e){if(e&&e.name==='AbortError')return;fail('I couldn’t reach the API. Check your internet, key and base URL. Some providers block browser requests.')}
+ }catch(e){if(e&&e.name==='AbortError')return;fail('I couldn’t reach the API. Check your internet, key and base URL. Some providers block browser requests.',el)}
 }
 function speak(t){
  if(!('speechSynthesis' in window)||!t){setState('idle');return}
@@ -164,10 +187,10 @@ function startListen(){
  try{speechSynthesis.speak(new SpeechSynthesisUtterance(''))}catch(e){}
  if(!SR){setCaption('Voice input isn’t supported in this browser. Type your question instead.');return}
  var finalT='';rec=new SR();rec.lang=LANG;rec.interimResults=true;rec.continuous=false;
- rec.onresult=function(e){var interim='';for(var i=e.resultIndex;i<e.results.length;i++){var r=e.results[i];if(r.isFinal)finalT+=r[0].transcript;else interim+=r[0].transcript}setCaption(finalT+interim||'Listening…')};
+ rec.onresult=function(e){var interim='';for(var i=e.resultIndex;i<e.results.length;i++){var r=e.results[i];if(r.isFinal)finalT+=r[0].transcript;else interim+=r[0].transcript}var tx=(finalT+interim).trim();if(tx){if(!liveEl){liveEl=addMsg('user','');liveEl.classList.add('live')}liveEl.textContent=tx;scrollEnd()}};
  rec.onerror=function(e){var blocked='Microphone access is blocked. Allow it for this page, or type instead.',m={'not-allowed':blocked,'service-not-allowed':blocked,'no-speech':'I didn’t hear anything. Tap and try again.','network':'Speech recognition needs an internet connection.'};
-  stopListen();setState('idle');setCaption(m[e.error]||'I couldn’t hear you. Try again.')};
- rec.onend=function(){var t=finalT.trim();if(state!=='listening')return;if(t)ask(t);else{stopListen();setState('idle');setCaption('I didn’t catch that. Tap and try again.')}};
+  dropLive();stopListen();setState('idle');setCaption(m[e.error]||'I couldn’t hear you. Try again.')};
+ rec.onend=function(){var t=finalT.trim();if(state!=='listening')return;if(t)ask(t);else{dropLive();stopListen();setState('idle');setCaption('I didn’t catch that. Tap and try again.')}};
  setState('listening');setCaption('Listening…');
  try{rec.start()}catch(e){}
  openMeter();
@@ -187,7 +210,7 @@ var DEF={base:'https://api.groq.com/openai/v1',model:'openai/gpt-oss-120b',key:'
 try{Object.assign(cfg,JSON.parse(localStorage.getItem('orb.cfg')||'{}'))}catch(e){}
 LANG=cfg.lang||navigator.language||'en-US';
 function saveCfg(){try{localStorage.setItem('orb.cfg',JSON.stringify(cfg))}catch(e){}}
-function fillForm(){$('base').value=cfg.base;$('model').value=cfg.model;$('key').value=cfg.key;$('lang').value=cfg.lang;$('cstat').textContent='Version 5'}
+function fillForm(){$('base').value=cfg.base;$('model').value=cfg.model;$('key').value=cfg.key;$('lang').value=cfg.lang;$('cstat').textContent='Version 6'}
 $('gear').onclick=function(){$('panel').hidden=!$('panel').hidden;if(!$('panel').hidden)fillForm()};
 $('save').onclick=function(){cfg.base=$('base').value.trim()||DEF.base;cfg.model=$('model').value.trim()||DEF.model;cfg.key=$('key').value.trim();cfg.lang=$('lang').value;
  LANG=cfg.lang||navigator.language||'en-US';saveCfg();$('panel').hidden=true;setCaption(cfg.key?'Saved. Tap the orb and talk to me.':'No key set, so I’ll use simple built-in replies.')};
@@ -202,6 +225,8 @@ $('load').onclick=async function(){
  catch(e){$('cstat').textContent='Couldn’t reach the server. Either there’s no internet, or this provider blocks requests made from a browser.'}
 };
 if(!cfg.key)setCaption('Tap the gear and add your API key. Until then I use simple built-in replies.');
+globalThis.hist=hist;greet();
+$('newchat').onclick=function(){chat.innerHTML='';hist.length=0;liveEl=null;cur=null;$('panel').hidden=true;greet()};
 
 /* ---------- Particle orb ---------- */
 var SP=[];for(var h=0;h<12;h++){var c=document.createElement('canvas');c.width=c.height=48;var g=c.getContext('2d');
@@ -245,4 +270,3 @@ requestAnimationFrame(frame);
 </script>
 </body>
 </html>
-                                        
