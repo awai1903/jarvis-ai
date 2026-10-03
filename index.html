@@ -370,6 +370,67 @@ html,body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif
 .pill:active{transform:scale(.96)}
 #chat::-webkit-scrollbar{width:0}
 `;document.head.appendChild(css);
+ /* ---------- Multi API auto switch ---------- */
+cfg.provs=cfg.provs||[];if(cfg.auto===undefined)cfg.auto=true;
+var ROLES=[['any','Everything'],['fast','Quick chat'],['smart','Hard thinking'],['code','Coding']];
+var PRE={'Groq':['https://api.groq.com/openai/v1','openai/gpt-oss-120b'],
+ 'Gemini':['https://generativelanguage.googleapis.com/v1beta/openai','gemini-2.5-flash'],
+ 'OpenRouter':['https://openrouter.ai/api/v1','openrouter/auto'],
+ 'OpenAI':['https://api.openai.com/v1','gpt-4o-mini'],
+ 'xAI Grok':['https://api.x.ai/v1',''],
+ 'Custom':['','']};
+function taskOf(t){
+ if(/\b(code|coding|function|bug|debug|error|python|javascript|html|css|sql|script|program|kotlin|java|compile|regex|api)\b/i.test(t))return 'code';
+ if(t.length>160||/\b(solve|calculate|equation|prove|explain|analy[sz]e|compare|step by step|reason|plan|essay|why)\b/i.test(t))return 'smart';
+ return 'fast';
+}
+function chain(t){
+ var all=[{name:'Main',base:cfg.base,model:cfg.model,key:cfg.key,role:'any'}].concat(cfg.provs).filter(function(p){return p.key&&p.base&&p.model});
+ if(!cfg.auto)return all.slice(0,1);
+ var k=taskOf(t),first=all.filter(function(p){return p.role===k}),
+  rest=all.filter(function(p){return first.indexOf(p)<0}).sort(function(a,b){return (b.role==='any')-(a.role==='any')});
+ return first.concat(rest);
+}
+var cur_chain=[],cur_i=0,cur_text='',_ask=ask,_fail=fail;
+function useP(p){var b=[cfg.base,cfg.model,cfg.key];cfg.base=p.base;cfg.model=p.model;cfg.key=p.key;try{_ask(cur_text)}finally{cfg.base=b[0];cfg.model=b[1];cfg.key=b[2]}}
+ask=function(text){
+ cur_text=text;cur_chain=chain(text);cur_i=0;
+ if(!cur_chain.length)return _ask(text);
+ useP(cur_chain[0]);setCaption('via '+cur_chain[0].name);
+};
+fail=function(m,el){
+ if(cur_chain.length&&cur_i<cur_chain.length-1){
+  cur_i++;var p=cur_chain[cur_i];el=el||cur;if(el)el.remove();
+  var us=chat.querySelectorAll('.msg.user');liveEl=us[us.length-1]||null;
+  useP(p);setCaption('Switched to '+p.name);return;
+ }
+ _fail(cur_chain.length?m+' ('+cur_chain[cur_i].name+')':m,el);
+};
+
+/* settings UI */
+var sec=document.createElement('div');
+sec.innerHTML='<label>Auto switch APIs by task</label>'+
+ '<div style="display:flex;align-items:center;gap:8px"><input id="autosw" type="checkbox"><span class="note" style="margin:0">On: best API for each question, and falls back if one fails. The API above is "Main".</span></div>'+
+ '<div id="plist"></div>'+
+ '<select id="padd" class="fld" style="margin-top:10px"><option value="">+ Add API…</option>'+Object.keys(PRE).map(function(k){return '<option>'+k+'</option>'}).join('')+'</select>';
+$('newchat').insertAdjacentElement('beforebegin',sec);
+function fld(i,f,ph,type){var e=document.createElement('input');e.className='fld';e.style.marginTop='6px';e.placeholder=ph;e.type=type||'text';e.value=cfg.provs[i][f]||'';e.autocomplete='off';e.spellcheck=false;e.oninput=function(){cfg.provs[i][f]=e.value.trim();saveCfg()};return e}
+function drawP(){
+ var box=$('plist');box.innerHTML='';
+ cfg.provs.forEach(function(p,i){
+  var d=document.createElement('div');d.style.cssText='border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:10px';
+  var r=document.createElement('select');r.className='fld';r.style.marginTop='6px';
+  ROLES.forEach(function(x){var o=document.createElement('option');o.value=x[0];o.textContent='Best for: '+x[1];r.appendChild(o)});
+  r.value=p.role||'any';r.onchange=function(){p.role=r.value;saveCfg()};
+  var x=document.createElement('button');x.className='pill';x.style.cssText='width:100%;margin-top:8px';x.textContent='Remove';
+  x.onclick=function(){cfg.provs.splice(i,1);saveCfg();drawP()};
+  d.append(fld(i,'name','Name (e.g. Groq)'),fld(i,'base','API base URL','url'),fld(i,'model','Model name'),fld(i,'key','API key','password'),r,x);
+  box.appendChild(d);
+ });
+}
+$('autosw').checked=cfg.auto;$('autosw').onchange=function(){cfg.auto=this.checked;saveCfg()};
+$('padd').onchange=function(){var v=this.value;if(!v)return;var pr=PRE[v];cfg.provs.push({name:v==='Custom'?'My API':v,base:pr[0],model:pr[1],key:'',role:'any'});this.value='';saveCfg();drawP()};
+drawP();
 /* ---------- Particle orb ---------- */
 var SP=[];for(var h=0;h<12;h++){var c=document.createElement('canvas');c.width=c.height=48;var g=c.getContext('2d');
  var gr=g.createRadialGradient(24,24,0,24,24,24);gr.addColorStop(0,'hsla('+h*30+',100%,92%,1)');gr.addColorStop(.25,'hsla('+h*30+',100%,72%,.55)');gr.addColorStop(1,'hsla('+h*30+',100%,60%,0)');
