@@ -174,10 +174,10 @@ $('load').onclick=async function(){
  var k=$('key').value.trim(),b=($('base').value.trim()||DEF.base).replace(/\/+$/,'');
  if(!k){$('cstat').textContent='Enter your key first.';return}
  $('cstat').textContent='Loading…';
- try{var r=await fetch(b+'/models',{headers:{Authorization:'Bearer '+k}});if(!r.ok)throw 0;var j=await r.json(),dl=$('models');dl.innerHTML='';
+ try{var r=await fetch(b+'/models',{headers:{Authorization:'Bearer '+k}});if(!r.ok){$('cstat').textContent=(r.status===401||r.status===403)?'The key was rejected (error '+r.status+'). Check the key.':'The server answered with error '+r.status+'.';return}var j=await r.json(),dl=$('models');dl.innerHTML='';
   (j.data||[]).forEach(function(m){if(m.id){var o=document.createElement('option');o.value=m.id;dl.appendChild(o)}});
   $('cstat').textContent=dl.children.length+' models found. Tap the Model box to pick one.'}
- catch(e){$('cstat').textContent='Couldn’t load models. Check the key and URL.'}
+ catch(e){$('cstat').textContent='Couldn’t reach the server. Either there’s no internet, or this provider blocks requests made from a browser.'}
 };
 if(!cfg.key)setCaption('Tap the gear and add your API key. Until then I use simple built-in replies.');
 
