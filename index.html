@@ -573,6 +573,87 @@ body.fresh #hero{display:flex;animation:pop .5s ease}
 body.fresh #chat .msg.assistant{display:none}
 #gear,#panel{z-index:5}
 `;document.head.appendChild(css3);
+ /* ---------- Gemini natural voice ---------- */
+var GM='gemini-3.1-flash-tts-preview';
+cfg.gmodel=cfg.gmodel||GM;
+var GV={Juniper:'Sulafat',Ember:'Alnilam',Cove:'Charon',Sol:'Kore',Breeze:'Puck',Maple:'Vindemiatrix',Arbor:'Umbriel'};
+var gBuf='',gId=0,gGen=0,gSrc=null,gCtx=null,gAn=null,gLvl=null,gTick=null;
+function useG(){return !!(cfg.gon&&cfg.gkey)}
+function gFetch(t){
+ return fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(cfg.gmodel||GM)+':generateContent',{
+  method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':cfg.gkey},
+  body:JSON.stringify({contents:[{parts:[{text:t}]}],generationConfig:{responseModalities:['AUDIO'],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:GV[cfg.voice]||'Kore'}}}}})
+ }).then(function(r){
+  if(!r.ok)return r.text().then(function(x){throw new Error(r.status+' '+x.slice(0,120))});
+  return r.json();
+ }).then(function(j){
+  var c=((j.candidates||[])[0]||{}).content,p=c&&c.parts&&c.parts.find(function(x){return x.inlineData});
+  if(!p)throw new Error('no audio returned');return p.inlineData.data;
+ });
+}
+function gPlay(b64,cb){
+ var bin=atob(b64),n=bin.length>>1,f=new Float32Array(n);
+ for(var i=0;i<n;i++){var v=bin.charCodeAt(2*i)|(bin.charCodeAt(2*i+1)<<8);if(v>32767)v-=65536;f[i]=v/32768}
+ gCtx=gCtx||new (window.AudioContext||window.webkitAudioContext)();
+ if(gCtx.state==='suspended')gCtx.resume();
+ if(!gAn){gAn=gCtx.createAnalyser();gAn.fftSize=256;gAn.connect(gCtx.destination);gLvl=new Uint8Array(gAn.fftSize)}
+ var b=gCtx.createBuffer(1,n,24000);b.copyToChannel(f,0);
+ var s=gCtx.createBufferSource();s.buffer=b;s.connect(gAn);gSrc=s;
+ clearInterval(gTick);
+ gTick=setInterval(function(){gAn.getByteTimeDomainData(gLvl);var m=0;for(var i=0;i<gLvl.length;i++){var d=Math.abs(gLvl[i]-128);if(d>m)m=d}bump=Math.min(1,m/50)},50);
+ s.onended=function(){clearInterval(gTick);if(gSrc===s)gSrc=null;cb()};
+ s.start();
+}
+function gStop(){gGen++;gBuf='';clearInterval(gTick);if(gSrc){var s=gSrc;gSrc=null;s.onended=null;try{s.stop()}catch(e){}}}
+function gSpeak(t,id,fallback){
+ var g=++gGen;
+ gFetch(t).then(function(b64){
+  if(g!==gGen)return;
+  gPlay(b64,function(){if(g!==gGen)return;pend=0;if(id===spk&&state==='speaking')setState('idle')});
+ }).catch(function(e){
+  if(g!==gGen)return;
+  setCaption('Gemini voice problem ('+String(e.message||e).slice(0,70)+'). Using phone voice.');
+  fallback();
+ });
+}
+var _speak=speak,_say=say,_stop=stopSpeak;
+stopSpeak=function(){gStop();_stop()};
+speak=function(t){
+ if(!useG()||!t)return _speak(t);
+ var id=++spk;gStop();if('speechSynthesis' in window)speechSynthesis.cancel();
+ setState('speaking');gSpeak(t,id,function(){_speak(t)});
+};
+say=function(t,id){
+ if(!useG())return _say(t,id);
+ gBuf+=(gBuf?' ':'')+t;gId=id;pend++;
+};
+setInterval(function(){
+ if(gBuf&&streamDone){var t=gBuf,id=gId;gBuf='';gSpeak(t,id,function(){pend=0;_say(t,id)})}
+},80);
+addEventListener('pointerdown',function(){gCtx=gCtx||new (window.AudioContext||window.webkitAudioContext)();if(gCtx.state==='suspended')gCtx.resume()},{once:true,capture:true});
+function demo(){stopSpeak();speak('How can I help you?')}
+if(typeof vl!=='undefined'&&vl.children){
+ [].forEach.call(vl.children,function(b){
+  b.onclick=function(){cfg.voice=b.dataset.n;$('voice').value=b.dataset.n;saveCfg();mark();demo()};
+ });
+}
+
+/* settings UI */
+var gs=document.createElement('div');
+gs.innerHTML='<label>Natural voice (Gemini)</label>'+
+ '<div style="display:flex;align-items:center;gap:8px"><input id="gon" type="checkbox"><span class="note" style="margin:0">Use Gemini AI voice for replies. Falls back to the phone voice if it fails.</span></div>'+
+ '<label for="gkey">Gemini API key</label><input id="gkey" class="fld" type="password" autocomplete="off" spellcheck="false" placeholder="AIza...">'+
+ '<label for="gmodel">TTS model</label><input id="gmodel" class="fld" autocomplete="off" spellcheck="false">'+
+ '<button id="gtest" class="pill" style="width:100%;margin-top:10px">Test Gemini voice</button>';
+$('newchat').insertAdjacentElement('beforebegin',gs);
+$('gon').checked=!!cfg.gon;$('gkey').value=cfg.gkey||'';$('gmodel').value=cfg.gmodel;
+$('gon').onchange=function(){cfg.gon=this.checked;saveCfg()};
+$('gkey').oninput=function(){cfg.gkey=this.value.trim();saveCfg()};
+$('gmodel').oninput=function(){cfg.gmodel=this.value.trim()||GM;saveCfg()};
+$('gtest').onclick=function(){
+ if(!cfg.gkey){$('cstat').textContent='Enter your Gemini key first.';return}
+ cfg.gon=true;$('gon').checked=true;saveCfg();$('cstat').textContent='Testing…';demo();
+};
 /* ---------- Particle orb ---------- */
 var SP=[];for(var h=0;h<12;h++){var c=document.createElement('canvas');c.width=c.height=48;var g=c.getContext('2d');
  var gr=g.createRadialGradient(24,24,0,24,24,24);gr.addColorStop(0,'hsla('+h*30+',100%,92%,1)');gr.addColorStop(.25,'hsla('+h*30+',100%,72%,.55)');gr.addColorStop(1,'hsla('+h*30+',100%,60%,0)');
