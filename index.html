@@ -245,7 +245,39 @@ $('jarvis').onclick=function(){
 if(!cfg.key)setCaption('Tap the gear and add your API key. Until then I use simple built-in replies.');
 globalThis.hist=hist;greet();
 $('newchat').onclick=function(){chat.innerHTML='';hist.length=0;liveEl=null;cur=null;$('panel').hidden=true;greet()};
-
+/* ---------- Auto voice mode ---------- */
+var auto=false,begun=false;
+function again(ms){setTimeout(function(){if(state==='idle'&&auto)startListen()},ms)}
+function setState(s){var p=state;state=s;$('state').textContent=LABEL[s];$('mic').classList.toggle('on',s==='listening');$('mic').setAttribute('aria-label',s==='listening'?'Stop listening':'Start listening');
+ if(s==='idle'&&p==='speaking'&&auto)again(600)}
+function startListen(){
+ auto=true;
+ try{speechSynthesis.speak(new SpeechSynthesisUtterance(''))}catch(e){}
+ if(!SR){setCaption('Voice input isn’t supported in this browser. Type your question instead.');return}
+ var finalT='',lastTx='',silT;rec=new SR();rec.lang=LANG;rec.interimResults=true;rec.continuous=true;
+ rec.onresult=function(e){var interim='';for(var i=e.resultIndex;i<e.results.length;i++){var r=e.results[i];if(r.isFinal)finalT+=r[0].transcript;else interim+=r[0].transcript}
+  var tx=(finalT+interim).trim();
+  if(tx){lastTx=tx;if(!liveEl){liveEl=addMsg('user','');liveEl.classList.add('live')}liveEl.textContent=tx;scrollEnd();
+   clearTimeout(silT);silT=setTimeout(function(){try{rec.stop()}catch(e){}},3000)}};
+ rec.onerror=function(e){clearTimeout(silT);var blocked='Microphone access is blocked. Allow it for this page, or type instead.',m={'not-allowed':blocked,'service-not-allowed':blocked,'no-speech':'I didn’t hear anything. Tap and try again.','network':'Speech recognition needs an internet connection.'};
+  dropLive();stopListen();setState('idle');
+  if(auto&&e.error==='no-speech'){setCaption('');again(400);return}
+  if(e.error==='not-allowed'||e.error==='service-not-allowed')auto=false;
+  setCaption(m[e.error]||'I couldn’t hear you. Try again.')};
+ rec.onend=function(){clearTimeout(silT);var t=lastTx.trim();if(state!=='listening')return;
+  if(t)ask(t);else{dropLive();stopListen();setState('idle');if(auto)again(400);else setCaption('I didn’t catch that. Tap and try again.')}};
+ setState('listening');setCaption('Listening…');
+ try{rec.start()}catch(e){}
+ openMeter();
+}
+function toggle(){
+ if(state==='listening'){if(!liveEl)auto=false;try{rec.stop()}catch(e){}return}
+ if(state==='thinking'||state==='speaking'){auto=false;clearTimeout(thinkT);if(aborter)aborter.abort();stopSpeak();setState('idle');setCaption('Stopped. Tap to talk again.');return}
+ startListen();
+}
+function begin(){if(begun)return;begun=true;setCaption('');auto=true;speak('Hello sir, welcome. How can I help you?')}
+if(navigator.userActivation&&navigator.userActivation.hasBeenActive)begin();
+else{setCaption('Tap anywhere to start');addEventListener('click',function go(e){removeEventListener('click',go,true);e.stopPropagation();e.preventDefault();begin()},true)}
 /* ---------- Particle orb ---------- */
 var SP=[];for(var h=0;h<12;h++){var c=document.createElement('canvas');c.width=c.height=48;var g=c.getContext('2d');
  var gr=g.createRadialGradient(24,24,0,24,24,24);gr.addColorStop(0,'hsla('+h*30+',100%,92%,1)');gr.addColorStop(.25,'hsla('+h*30+',100%,72%,.55)');gr.addColorStop(1,'hsla('+h*30+',100%,60%,0)');
