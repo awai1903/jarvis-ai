@@ -476,9 +476,9 @@ function runD(){
 document.body.classList.add('chatonly');
 var vm=false,vmRec=null,vmTxt='',vmT=null,greeted=false;
 function begin(){}
-function greet(){addMsg('assistant','Hi! Type below, tap the mic to dictate, or tap the wave button for a voice chat.')}
+function greet(){addMsg()}
 function mergeRes(e){
- var out=[];
+ var out=[];l
  for(var i=0;i<e.results.length;i++){
   var t=e.results[i][0].transcript.trim();if(!t)continue;
   var l=out.length?out[out.length-1]:'';
