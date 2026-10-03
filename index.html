@@ -314,6 +314,62 @@ PRESETS.forEach(function(p){
 $('voice').style.display='none';$('voice').insertAdjacentElement('afterend',vl);mark();
 ['pitch','rate'].forEach(function(i){$(i).style.display='none';document.querySelector('label[for='+i+']').style.display='none'});
 $('jarvis').style.display='none';
+ /* ---------- Dictation mic + UI upgrade ---------- */
+var dic=null,PH='Type or tap the mic and speak…';
+$('txt').placeholder=PH;
+function stopDic(){if(dic){dic.onresult=null;try{dic.stop()}catch(e){}}}
+function dictate(){
+ if(dic){try{dic.stop()}catch(e){}return}
+ if(!SR){setCaption('Voice input isn’t supported in this browser. Type your question instead.');return}
+ auto=false;stopSpeak();if(rec)stopListen();setState('idle');setCaption('');
+ var d=new SR(),base=$('txt').value.trim(),fin='';base=base?base+' ':'';
+ d.lang=LANG;d.interimResults=true;d.continuous=true;dic=d;
+ d.onresult=function(e){var it='';for(var i=e.resultIndex;i<e.results.length;i++){var r=e.results[i];if(r.isFinal)fin+=r[0].transcript;else it+=r[0].transcript}$('txt').value=base+fin+it};
+ d.onerror=function(e){if(e.error==='not-allowed'||e.error==='service-not-allowed')setCaption('Microphone access is blocked. Allow it for this page.')};
+ d.onend=function(){if(dic!==d)return;dic=null;$('mic').classList.remove('rec');$('bar').classList.remove('rec');$('txt').placeholder=PH};
+ try{d.start()}catch(e){dic=null;return}
+ $('mic').classList.add('rec');$('bar').classList.add('rec');$('txt').placeholder='Listening… speak now';
+}
+$('mic').onclick=dictate;
+orb.onclick=function(){stopDic();toggle()};
+$('send').onclick=function(){stopDic();send()};
+$('txt').onkeydown=function(e){if(e.key==='Enter'){stopDic();send()}};
+
+var stEl=$('state');stEl.dataset.s='ready';
+new MutationObserver(function(){stEl.dataset.s=stEl.textContent.toLowerCase()}).observe(stEl,{childList:true,characterData:true,subtree:true});
+
+var css=document.createElement('style');css.textContent=`
+html,body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+#stage{background:radial-gradient(900px 520px at 50% -8%,rgba(79,140,255,.20),transparent 62%),radial-gradient(700px 480px at 100% 105%,rgba(150,90,255,.16),transparent 60%),var(--bg)}
+@keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes blink{50%{opacity:.35}}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(255,93,115,.55)}100%{box-shadow:0 0 0 14px rgba(255,93,115,0)}}
+#state{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#cfd6ea;margin-bottom:6px}
+#state::before{content:"";width:8px;height:8px;border-radius:50%;background:#6b7490;transition:background .3s}
+#state[data-s=listening]::before{background:#4ade80;box-shadow:0 0 10px #4ade80}
+#state[data-s=thinking]::before{background:#fbbf24;box-shadow:0 0 10px #fbbf24;animation:blink 1s infinite}
+#state[data-s=speaking]::before{background:#60a5fa;box-shadow:0 0 10px #60a5fa}
+.msg{animation:pop .28s ease}
+.msg.user{background:linear-gradient(135deg,#3b6cff,#7a5cff);border:0;color:#fff;box-shadow:0 6px 18px rgba(80,100,255,.25)}
+.msg.assistant{background:rgba(255,255,255,.05);border:1px solid var(--line);padding:10px 14px;border-radius:18px 18px 18px 4px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.msg.typing{animation:blink 1.1s infinite}
+#bar{background:rgba(21,25,39,.72);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(120,150,255,.25);box-shadow:0 10px 34px rgba(0,0,0,.45);transition:border-color .25s,box-shadow .25s}
+#bar:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,140,255,.2),0 10px 34px rgba(0,0,0,.45)}
+#bar.rec{border-color:#ff5d73;box-shadow:0 0 0 3px rgba(255,93,115,.2),0 10px 34px rgba(0,0,0,.45)}
+.btn{transition:background .25s,transform .15s,filter .2s}
+.btn:active{transform:scale(.9)}
+#send{background:linear-gradient(135deg,#3b6cff,#7a5cff);border:0}
+#send:hover{filter:brightness(1.15)}
+#mic.rec{background:#ff5d73;border-color:#ff5d73;animation:ring 1.2s infinite}
+#gear{transition:transform .4s,background .25s}
+#gear:hover{transform:rotate(60deg)}
+#panel{background:rgba(14,18,30,.88);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);box-shadow:0 20px 60px rgba(0,0,0,.55);animation:pop .22s ease}
+#panel[hidden]{display:none}
+.pill{transition:filter .2s,transform .15s}
+.pill:hover{filter:brightness(1.25)}
+.pill:active{transform:scale(.96)}
+#chat::-webkit-scrollbar{width:0}
+`;document.head.appendChild(css);
 /* ---------- Particle orb ---------- */
 var SP=[];for(var h=0;h<12;h++){var c=document.createElement('canvas');c.width=c.height=48;var g=c.getContext('2d');
  var gr=g.createRadialGradient(24,24,0,24,24,24);gr.addColorStop(0,'hsla('+h*30+',100%,92%,1)');gr.addColorStop(.25,'hsla('+h*30+',100%,72%,.55)');gr.addColorStop(1,'hsla('+h*30+',100%,60%,0)');
