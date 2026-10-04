@@ -716,6 +716,135 @@ orb.onclick=function(){
 var vendEl=$('vend');if(vendEl)vendEl.remove();
 var vnote=vb.querySelector('.note');
 if(vnote)vnote.innerHTML='<a href="https://support.anthropic.com/en/articles/8525154-claude-is-providing-incorrect-or-misleading-responses-what-s-going-on" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">Jarvis is AI and can make mistakes. Please double-check responses.</a>';
+ /* ---------- Golden holographic orb (Jarvis style) ---------- */
+(function(){
+var N2=1000,Q=[],GA=Math.PI*(3-Math.sqrt(5));
+for(var n=0;n<N2;n++){
+ var yy=1-2*(n+.5)/N2,rr=Math.sqrt(1-yy*yy),th=GA*n,inner=Math.random()<.28,
+  f=inner?.1+Math.random()*.62:.84+Math.random()*.24,
+  px=Math.cos(th)*rr,py=yy,pz=Math.sin(th)*rr,
+  ax=Math.random()-.5,ay=Math.random()-.5,az=Math.random()-.5,
+  tx=py*az-pz*ay,ty=pz*ax-px*az,tz=px*ay-py*ax,tn=Math.hypot(tx,ty,tz)||1;
+ Q.push({x:px*f,y:py*f,z:pz*f,tx:tx/tn,ty:ty/tn,tz:tz/tn,len:.015+Math.random()*.08,ph:Math.random()*6.28,hot:Math.random()<.1});
+}
+var GS=document.createElement('canvas');GS.width=GS.height=64;
+var gg=GS.getContext('2d'),gr=gg.createRadialGradient(32,32,0,32,32,32);
+gr.addColorStop(0,'rgba(255,245,200,1)');gr.addColorStop(.2,'rgba(255,190,70,.7)');gr.addColorStop(.55,'rgba(255,120,10,.22)');gr.addColorStop(1,'rgba(255,100,0,0)');
+gg.fillStyle=gr;gg.fillRect(0,0,64,64);
+var SG=new Float32Array(N2*4),SB=new Uint8Array(N2);
+var STY=['','rgba(190,90,8,.38)','rgba(255,135,20,.55)','rgba(255,172,48,.8)','rgba(255,228,150,.95)'],LW=[0,.8,1,1.3,1.7];
+var cs=1,sn=0,ct=1,st=0,RX=0,RY=0,RZ=0,sp2=0,last2=performance.now();
+function rot(x,y,z){var a=x*cs+z*sn,b=-x*sn+z*cs;RX=a;RY=y*ct-b*st;RZ=y*st+b*ct}
+
+/* bigger orb area */
+function big(){R0=Math.min(W*.24,H*.13);var topH=Math.round(R0*3.5);CY=topH*.5;$('spacer').style.height=topH+'px';var dy=CY-H/2;place(orb,R0*2.6,R0*2.6,dy);place(halo,R0*5.2,R0*5.2,dy)}
+big();addEventListener('resize',big);
+
+frame=function(now){
+ var dt=Math.min((now-last2)/1000,.05),i,q;last2=now;
+ S.listen=appr(S.listen,state==='listening'?1:0,dt,3.2);S.think=appr(S.think,state==='thinking'?1:0,dt,3);S.speak=appr(S.speak,state==='speaking'?1:0,dt,3.2);
+ bump=Math.max(0,bump-dt*3.5);var act=S.listen+S.speak,raw=0;
+ if(an&&state==='listening'){an.getByteFrequencyData(data);var sum=0;for(var j=0;j<data.length;j++)sum+=data[j];micLevel=Math.min(1,sum/data.length/255*3.2);raw=micLevel}
+ else if(state==='listening')raw=.3+.22*Math.sin(now/260)*Math.sin(now/610);
+ else if(state==='speaking')raw=Math.min(1,.3+.2*Math.sin(now/130)*Math.sin(now/340)+.5*bump);
+ if(now-extT<250)raw=ext;
+ lvl=appr(lvl,raw,dt,12);
+ sp2+=dt*(reduce?.08:.3+1.4*S.think-.12*S.listen+.15*S.speak);
+ var pulse=1+.07*S.listen+.05*S.speak+.12*lvl*act-.04*S.think+.012*Math.sin(now/1300),R=R0*pulse,cx=W/2;
+ orb.style.transform='scale('+pulse+')';
+ halo.style.transform='scale('+(.9+.25*act+.15*lvl)+')';halo.style.opacity=Math.min(1,.35+.4*act+.3*lvl+.2*S.think);
+ cs=Math.cos(sp2);sn=Math.sin(sp2);var tl=.42+.08*Math.sin(now/2600);ct=Math.cos(tl);st=Math.sin(tl);
+ ctx.clearRect(0,0,W,H);
+ ctx.globalCompositeOperation='source-over';
+ var dg=ctx.createRadialGradient(cx,CY,R*.2,cx,CY,R*1.8);
+ dg.addColorStop(0,'rgba(120,60,0,.20)');dg.addColorStop(.7,'rgba(70,30,0,.12)');dg.addColorStop(1,'rgba(0,0,0,0)');
+ ctx.fillStyle=dg;ctx.beginPath();ctx.arc(cx,CY,R*1.8,0,6.283);ctx.fill();
+ ctx.globalCompositeOperation='lighter';
+
+ /* outer tick ring + HUD corner brackets */
+ var tr=R*1.3+R*.025*lvl*act;
+ ctx.lineWidth=1;ctx.strokeStyle='rgba(255,170,60,.32)';
+ ctx.beginPath();ctx.arc(cx,CY,tr,0,6.283);ctx.stroke();
+ ctx.beginPath();
+ for(var k=0;k<72;k++){var a=k*Math.PI/36-sp2*.5,l=(k%6===0)?R*.07:R*.03;ctx.moveTo(cx+Math.cos(a)*tr,CY+Math.sin(a)*tr);ctx.lineTo(cx+Math.cos(a)*(tr-l),CY+Math.sin(a)*(tr-l))}
+ ctx.stroke();
+ var bk=R*1.42,bl=R*.22;ctx.strokeStyle='rgba(255,170,60,.5)';ctx.lineWidth=1.4;ctx.beginPath();
+ [[-1,-1],[1,-1],[1,1],[-1,1]].forEach(function(c){var bx=cx+c[0]*bk,by=CY+c[1]*bk;ctx.moveTo(bx-c[0]*bl,by);ctx.lineTo(bx,by);ctx.lineTo(bx,by-c[1]*bl)});
+ ctx.stroke();
+
+ /* shell of glowing fragments */
+ var flick=.05+.22*lvl*act,wv=(.04+.1*lvl)*act;
+ for(i=0;i<N2;i++){
+  q=Q[i];
+  if(Math.random()<flick){SB[i]=0;continue}
+  var w=1+wv*Math.sin(q.ph+now/(160+q.ph*25))+.05*S.think*Math.sin(q.ph*3+now/140);
+  rot(q.x,q.y,q.z);var x=RX,y=RY,z=RZ;
+  rot(q.tx,q.ty,q.tz);
+  var L=q.len*(1+.9*lvl*act),kk=R*1.05*w,ddx=RX*L*kk,ddy=RY*L*kk,X=cx+x*kk,Y=CY+y*kk,dp=(z+1.1)/2.2;
+  SG[4*i]=X-ddx;SG[4*i+1]=Y-ddy;SG[4*i+2]=X+ddx;SG[4*i+3]=Y+ddy;
+  SB[i]=1+(dp>.25)+(dp>.5)+(dp>.75);
+  if(q.hot&&dp>.35){var s=(2+5*dp)*(1+lvl*act);ctx.globalAlpha=.55;ctx.drawImage(GS,X-s,Y-s,s*2,s*2);ctx.globalAlpha=1}
+ }
+ ctx.lineCap='round';
+ for(var b=1;b<=4;b++){
+  ctx.beginPath();
+  for(i=0;i<N2;i++)if(SB[i]===b){ctx.moveTo(SG[4*i],SG[4*i+1]);ctx.lineTo(SG[4*i+2],SG[4*i+3])}
+  ctx.strokeStyle=STY[b];ctx.lineWidth=LW[b];ctx.stroke();
+ }
+
+ /* glowing core */
+ var cr=R*(.5+.18*lvl*act+.12*S.think+.04*Math.sin(now/500));
+ ctx.globalAlpha=Math.min(1,.65+.3*lvl+.25*S.think);ctx.drawImage(GS,cx-cr,CY-cr,cr*2,cr*2);ctx.globalAlpha=1;
+
+ /* swirling core filaments */
+ var fs=1+2.2*S.think+.6*lvl*act;
+ ctx.lineWidth=1.3;
+ for(var f2=0;f2<5;f2++){
+  var a0=now/900*fs*(f2%2?1:-1)+f2,b0=now/1200*fs+f2*1.3,c0=now/1500*fs-f2,sz=(.2+.05*f2+.05*lvl*act)*2;
+  ctx.beginPath();
+  for(var u=0;u<=64;u++){
+   var t=u/64*6.283;
+   rot(Math.cos(t*(2+f2%2)+a0),Math.sin(t*3+b0),Math.sin(t*(2+f2%3)+c0));
+   var X2=cx+RX*R*sz,Y2=CY+RY*R*sz;
+   if(u)ctx.lineTo(X2,Y2);else ctx.moveTo(X2,Y2);
+  }
+  ctx.strokeStyle='rgba(255,'+(200+f2*10)+','+(110+f2*20)+','+(.55+.1*S.think)+')';ctx.stroke();
+ }
+
+ /* rotating dashed rings that ripple with the voice */
+ var RR=[.62,.97,1.2],TT=[1.2,.5,1.5],RS=['rgba(255,215,130,.8)','rgba(255,150,35,.35)','rgba(255,175,60,.6)'],RW=[1.3,2.6,1.2];
+ for(var j2=0;j2<3;j2++){
+  var tj=TT[j2]+.15*Math.sin(now/2000+j2),yj=sp2*(j2%2?-1.6:1.4)*(1+S.think*1.4),
+   ctj=Math.cos(tj),stj=Math.sin(tj),cyj=Math.cos(yj),syj=Math.sin(yj),pen=false;
+  ctx.beginPath();
+  for(var m=0;m<=96;m++){
+   var an2=m/96*6.283,wv2=1+(.025+.07*lvl)*act*Math.sin(an2*7+now/(220-j2*30))+.015*Math.sin(an2*3-now/700),
+    lx=Math.cos(an2)*RR[j2]*wv2,lz=Math.sin(an2)*RR[j2]*wv2,
+    y1=-lz*stj,z1=lz*ctj,x2=lx*cyj+z1*syj,z2=-lx*syj+z1*cyj;
+   rot(x2,y1,z2);
+   var on=(m+j2*3)%12<8,X3=cx+RX*R,Y3=CY+RY*R;
+   if(on){if(pen)ctx.lineTo(X3,Y3);else ctx.moveTo(X3,Y3);pen=true}else pen=false;
+  }
+  ctx.strokeStyle=RS[j2];ctx.lineWidth=RW[j2];ctx.stroke();
+ }
+ ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;
+ requestAnimationFrame(frame);
+};
+
+var css5=document.createElement('style');css5.textContent=`
+#halo{background:radial-gradient(circle,rgba(255,160,40,.32),rgba(255,120,20,.09) 45%,rgba(0,0,0,0) 70%)}
+#stage{background:radial-gradient(900px 520px at 50% 0%,rgba(255,150,40,.13),transparent 62%),var(--bg)}
+/* 3D golden loading orb (replaces the old spark logo) */
+.msg.assistant.typing{font-size:0!important;width:46px;height:46px;min-height:0;padding:0;margin:2px 0 0 4px;border:0;border-radius:50%;box-shadow:none;position:relative;perspective:240px;
+ background:radial-gradient(circle,#fff6d0 0,#ffc04a 14%,rgba(255,130,10,.45) 34%,rgba(255,110,0,0) 62%);animation:jcore 1.6s ease-in-out infinite}
+.msg.assistant.typing::before,.msg.assistant.typing::after{content:"";position:absolute;display:block;width:auto;height:auto;inset:3px;border-radius:50%;box-sizing:border-box;background:none}
+.msg.assistant.typing::before{border:2px dashed rgba(255,190,80,.9);border-top-color:transparent;filter:drop-shadow(0 0 4px rgba(255,150,30,.8));animation:jr1 2.2s linear infinite}
+.msg.assistant.typing::after{inset:9px;border:2px dotted rgba(255,225,150,.95);border-bottom-color:transparent;filter:none;animation:jr2 1.5s linear infinite}
+@keyframes jr1{from{transform:rotateX(68deg) rotateZ(0)}to{transform:rotateX(68deg) rotateZ(360deg)}}
+@keyframes jr2{from{transform:rotateY(70deg) rotateZ(0)}to{transform:rotateY(70deg) rotateZ(-360deg)}}
+@keyframes jcore{50%{filter:brightness(1.4)}}
+`;document.head.appendChild(css5);
+})(); 
  
 /* ---------- Particle orb ---------- */
 var SP=[];for(var h=0;h<12;h++){var c=document.createElement('canvas');c.width=c.height=48;var g=c.getContext('2d');
