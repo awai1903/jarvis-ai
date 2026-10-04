@@ -952,7 +952,86 @@ body.vmode #navc{border-color:#ff5d73;box-shadow:0 0 22px rgba(255,93,115,.6),in
 
 go('home');
 })();
- 
+ /* ---------- Jarvis page = orb only + reply footer (logo, retry, copy) ---------- */
+(function(){
+var chatEl=$('chat');
+
+/* if voice mode stops with an error, show the message in Chat */
+var _v4=vmEnd;
+vmEnd=function(m){
+ var j=document.body.getAttribute('data-tab')==='jarvis';
+ _v4(m);
+ if(m&&j){var b=document.querySelector('#nav [data-t="chat"]');if(b)b.click()}
+};
+
+var IC_RETRY='<svg viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>';
+var IC_COPY='<svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+var IC_OK='<svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>';
+
+/* logo + retry + copy under every answer */
+function ensureFoot(el){
+ if(el._foot&&el._foot.isConnected)return el._foot;
+ var f=document.createElement('div');f.className='afoot busy';
+ f.innerHTML='<span class="alogo"></span><span class="acts"><button class="ab rt" aria-label="Retry">'+IC_RETRY+'</button><button class="ab cp" aria-label="Copy">'+IC_COPY+'</button></span>';
+ el.insertAdjacentElement('afterend',f);el._foot=f;
+ f.querySelector('.rt').onclick=function(){retry(el)};
+ f.querySelector('.cp').onclick=function(){copyText(el,this)};
+ scrollEnd();
+ return f;
+}
+function fin(el){if(el&&el._foot)el._foot.classList.remove('busy')}
+
+function retry(el){
+ var u=el.previousElementSibling;
+ if(!u||!u.classList.contains('user'))return;
+ var L=hist[hist.length-1];
+ if(hist.length>=2&&L&&L.role==='assistant'&&L.content===el.textContent.trim())hist.length-=2;
+ var text=u.textContent;
+ if(el._foot)el._foot.remove();
+ el.remove();
+ liveEl=u;
+ ask(text);
+}
+function copyText(el,btn){
+ var t=el.textContent;
+ function ok(){btn.innerHTML=IC_OK;btn.classList.add('done');setTimeout(function(){btn.innerHTML=IC_COPY;btn.classList.remove('done')},1500)}
+ function fallback(){var ta=document.createElement('textarea');ta.value=t;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');ok()}catch(e){}ta.remove()}
+ if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(ok,fallback);else fallback();
+}
+
+/* the logo sits under the answer while it is being written */
+var _sh=show;
+show=function(t,el){el=el||cur;_sh(t,el);if(el&&t)ensureFoot(el)};
+
+/* when the answer is finished (or stopped) the logo stops and retry/copy appear */
+var _ss=setState;
+setState=function(s){
+ _ss(s);
+ if(s==='idle'||s==='thinking')fin(cur);
+ [].forEach.call(chatEl.querySelectorAll('.afoot'),function(f){
+  var p=f.previousElementSibling;if(!p||!p.classList.contains('assistant'))f.remove();
+ });
+};
+
+var css7=document.createElement('style');css7.textContent=`
+body[data-tab=jarvis] #chat,body[data-tab=jarvis] #dock,body[data-tab=jarvis] #state,body[data-tab=jarvis] #spacer{display:none}
+.msg.assistant:empty{display:none}
+.afoot{align-self:flex-start;display:flex;align-items:center;gap:4px;margin:-6px 0 0 4px;min-height:32px}
+.alogo{width:24px;height:24px;border-radius:50%;position:relative;perspective:90px;flex:none;background:radial-gradient(circle,#fff6d0 0,#ffc04a 16%,rgba(255,130,10,.5) 38%,rgba(255,110,0,0) 66%)}
+.alogo::before,.alogo::after{content:"";position:absolute;inset:2px;border-radius:50%;box-sizing:border-box;border:1.5px dashed rgba(255,190,80,.95);border-top-color:transparent;transform:rotateX(68deg);animation:al1 2s linear infinite}
+.alogo::after{inset:6px;border:1.5px dotted rgba(255,225,150,.95);border-bottom-color:transparent;transform:rotateY(70deg);animation:al2 1.4s linear infinite}
+.afoot:not(.busy) .alogo::before,.afoot:not(.busy) .alogo::after{animation:none}
+.afoot.busy .acts{display:none}
+.acts{display:flex;gap:2px;margin-left:6px}
+.ab{width:32px;height:32px;border-radius:10px;border:0;background:none;color:var(--dim);cursor:pointer;display:grid;place-items:center;-webkit-tap-highlight-color:transparent;transition:background .2s,color .2s}
+.ab svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ab:hover{background:rgba(255,255,255,.07);color:#ffd9a0}
+.ab.done{color:#4ade80}
+.afoot:not(:last-child) .rt{display:none}
+@keyframes al1{from{transform:rotateX(68deg) rotateZ(0)}to{transform:rotateX(68deg) rotateZ(360deg)}}
+@keyframes al2{from{transform:rotateY(70deg) rotateZ(0)}to{transform:rotateY(70deg) rotateZ(-360deg)}}
+`;document.head.appendChild(css7);
+})();
 /* ---------- Particle orb ---------- */
 var SP=[];for(var h=0;h<12;h++){var c=document.createElement('canvas');c.width=c.height=48;var g=c.getContext('2d');
  var gr=g.createRadialGradient(24,24,0,24,24,24);gr.addColorStop(0,'hsla('+h*30+',100%,92%,1)');gr.addColorStop(.25,'hsla('+h*30+',100%,72%,.55)');gr.addColorStop(1,'hsla('+h*30+',100%,60%,0)');
