@@ -659,6 +659,15 @@ var _sp2=speak,_say2=say,_demo=demo,prev=false;
 speak=function(t){if(!vm&&!prev){setState('idle');return}_sp2(t)};
 say=function(t,id){if(!vm)return;_say2(t,id)};
 demo=function(){prev=true;try{_demo()}finally{prev=false}};
+ /* ---------- Animated logo while thinking ---------- */
+var css4=document.createElement('style');css4.textContent=`
+.msg.assistant.typing{font-size:0;background:none;border:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;animation:none;padding:4px 6px;min-height:34px}
+.msg.assistant.typing::before{content:"";display:block;width:30px;height:30px;
+ background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%234f8cff'/><stop offset='1' stop-color='%23b18cff'/></linearGradient></defs><g stroke='url(%23g)' stroke-width='3.4' stroke-linecap='round'><line x1='20' y1='2' x2='20' y2='12'/><line x1='20' y1='2' x2='20' y2='12' transform='rotate(45 20 20)'/><line x1='20' y1='5' x2='20' y2='12' transform='rotate(90 20 20)'/><line x1='20' y1='2' x2='20' y2='12' transform='rotate(135 20 20)'/><line x1='20' y1='2' x2='20' y2='12' transform='rotate(180 20 20)'/><line x1='20' y1='5' x2='20' y2='12' transform='rotate(225 20 20)'/><line x1='20' y1='2' x2='20' y2='12' transform='rotate(270 20 20)'/><line x1='20' y1='5' x2='20' y2='12' transform='rotate(315 20 20)'/></g></svg>") center/contain no-repeat;
+ filter:drop-shadow(0 0 8px rgba(110,140,255,.55));animation:sparkgo 2.4s ease-in-out infinite}
+@keyframes sparkgo{0%{transform:rotate(0) scale(.85)}50%{transform:rotate(180deg) scale(1.12)}100%{transform:rotate(360deg) scale(.85)}}
+@media (prefers-reduced-motion:reduce){.msg.assistant.typing::before{animation-duration:6s}}
+`;document.head.appendChild(css4);
  
 /* ---------- Particle orb ---------- */
 var SP=[];for(var h=0;h<12;h++){var c=document.createElement('canvas');c.width=c.height=48;var g=c.getContext('2d');
