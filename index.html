@@ -718,14 +718,17 @@ var vnote=vb.querySelector('.note');
 if(vnote)vnote.innerHTML='<a href="https://support.anthropic.com/en/articles/8525154-claude-is-providing-incorrect-or-misleading-responses-what-s-going-on" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">Jarvis is AI and can make mistakes. Please double-check responses.</a>';
  /* ---------- Golden holographic orb (Jarvis style) ---------- */
 (function(){
-var N2=1000,Q=[],GA=Math.PI*(3-Math.sqrt(5));
+var N2=1400,Q=[];
 for(var n=0;n<N2;n++){
- var yy=1-2*(n+.5)/N2,rr=Math.sqrt(1-yy*yy),th=GA*n,inner=Math.random()<.28,
-  f=inner?.1+Math.random()*.62:.84+Math.random()*.24,
-  px=Math.cos(th)*rr,py=yy,pz=Math.sin(th)*rr,
-  ax=Math.random()-.5,ay=Math.random()-.5,az=Math.random()-.5,
-  tx=py*az-pz*ay,ty=pz*ax-px*az,tz=px*ay-py*ax,tn=Math.hypot(tx,ty,tz)||1;
- Q.push({x:px*f,y:py*f,z:pz*f,tx:tx/tn,ty:ty/tn,tz:tz/tn,len:.015+Math.random()*.08,ph:Math.random()*6.28,hot:Math.random()<.1});
+ var r0=Math.random(),lon=Math.random()*6.283,lat,f,kind;
+ if(r0<.58){lat=Math.max(-.7,Math.min(.7,(Math.random()+Math.random()+Math.random()-1.5)*.4));f=.84+Math.random()*.2;kind=0}
+ else if(r0<.82){lat=Math.asin(2*Math.random()-1);f=.84+Math.random()*.22;kind=1}
+ else{lat=Math.asin(2*Math.random()-1);f=.12+Math.random()*.6;kind=2}
+ var cl=Math.cos(lat),px=Math.cos(lon)*cl,py=Math.sin(lat),pz=Math.sin(lon)*cl,tx,ty,tz;
+ if(kind===0&&Math.random()<.62){tx=-Math.sin(lon);ty=0;tz=Math.cos(lon)}
+ else{var ax=Math.random()-.5,ay=Math.random()-.5,az=Math.random()-.5;tx=py*az-pz*ay;ty=pz*ax-px*az;tz=px*ay-py*ax}
+ var tn=Math.hypot(tx,ty,tz)||1;
+ Q.push({x:px*f,y:py*f,z:pz*f,tx:tx/tn,ty:ty/tn,tz:tz/tn,len:kind<2?.02+Math.random()*Math.random()*.11:.02+Math.random()*.06,ph:Math.random()*6.28,hot:Math.random()<.12});
 }
 var GS=document.createElement('canvas');GS.width=GS.height=64;
 var gg=GS.getContext('2d'),gr=gg.createRadialGradient(32,32,0,32,32,32);
@@ -736,8 +739,8 @@ var STY=['','rgba(190,90,8,.38)','rgba(255,135,20,.55)','rgba(255,172,48,.8)','r
 var cs=1,sn=0,ct=1,st=0,RX=0,RY=0,RZ=0,sp2=0,last2=performance.now();
 function rot(x,y,z){var a=x*cs+z*sn,b=-x*sn+z*cs;RX=a;RY=y*ct-b*st;RZ=y*st+b*ct}
 
-/* bigger orb area */
-function big(){R0=Math.min(W*.24,H*.13);var topH=Math.round(R0*3.5);CY=topH*.5;$('spacer').style.height=topH+'px';var dy=CY-H/2;place(orb,R0*2.6,R0*2.6,dy);place(halo,R0*5.2,R0*5.2,dy)}
+/* orb size/position (centred and bigger on the Jarvis page) */
+function big(){var jv=document.body.getAttribute('data-tab')==='jarvis';if(jv){R0=Math.min(W*.3,H*.18);CY=(H-80)/2}else{R0=Math.min(W*.24,H*.13);CY=Math.round(R0*3.5)*.5}var topH=Math.round(R0*3.5);if(!jv)$('spacer').style.height=topH+'px';var dy=CY-H/2;place(orb,R0*2.6,R0*2.6,dy);place(halo,R0*5.2,R0*5.2,dy)}
 big();addEventListener('resize',big);
 
 frame=function(now){
@@ -753,7 +756,7 @@ frame=function(now){
  var pulse=1+.07*S.listen+.05*S.speak+.12*lvl*act-.04*S.think+.012*Math.sin(now/1300),R=R0*pulse,cx=W/2;
  orb.style.transform='scale('+pulse+')';
  halo.style.transform='scale('+(.9+.25*act+.15*lvl)+')';halo.style.opacity=Math.min(1,.35+.4*act+.3*lvl+.2*S.think);
- cs=Math.cos(sp2);sn=Math.sin(sp2);var tl=.42+.08*Math.sin(now/2600);ct=Math.cos(tl);st=Math.sin(tl);
+ cs=Math.cos(sp2);sn=Math.sin(sp2);var tl=1.2+.1*Math.sin(now/2600);ct=Math.cos(tl);st=Math.sin(tl);
  ctx.clearRect(0,0,W,H);
  ctx.globalCompositeOperation='source-over';
  var dg=ctx.createRadialGradient(cx,CY,R*.2,cx,CY,R*1.8);
@@ -772,7 +775,7 @@ frame=function(now){
  [[-1,-1],[1,-1],[1,1],[-1,1]].forEach(function(c){var bx=cx+c[0]*bk,by=CY+c[1]*bk;ctx.moveTo(bx-c[0]*bl,by);ctx.lineTo(bx,by);ctx.lineTo(bx,by-c[1]*bl)});
  ctx.stroke();
 
- /* shell of glowing fragments */
+ /* ring of glowing fragments */
  var flick=.05+.22*lvl*act,wv=(.04+.1*lvl)*act;
  for(i=0;i<N2;i++){
   q=Q[i];
@@ -793,14 +796,14 @@ frame=function(now){
  }
 
  /* glowing core */
- var cr=R*(.5+.18*lvl*act+.12*S.think+.04*Math.sin(now/500));
+ var cr=R*(.42+.14*lvl*act+.1*S.think+.03*Math.sin(now/500));
  ctx.globalAlpha=Math.min(1,.65+.3*lvl+.25*S.think);ctx.drawImage(GS,cx-cr,CY-cr,cr*2,cr*2);ctx.globalAlpha=1;
 
  /* swirling core filaments */
  var fs=1+2.2*S.think+.6*lvl*act;
  ctx.lineWidth=1.3;
  for(var f2=0;f2<5;f2++){
-  var a0=now/900*fs*(f2%2?1:-1)+f2,b0=now/1200*fs+f2*1.3,c0=now/1500*fs-f2,sz=(.2+.05*f2+.05*lvl*act)*2;
+  var a0=now/900*fs*(f2%2?1:-1)+f2,b0=now/1200*fs+f2*1.3,c0=now/1500*fs-f2,sz=.1+.035*f2+.04*lvl*act;
   ctx.beginPath();
   for(var u=0;u<=64;u++){
    var t=u/64*6.283;
@@ -808,11 +811,11 @@ frame=function(now){
    var X2=cx+RX*R*sz,Y2=CY+RY*R*sz;
    if(u)ctx.lineTo(X2,Y2);else ctx.moveTo(X2,Y2);
   }
-  ctx.strokeStyle='rgba(255,'+(200+f2*10)+','+(110+f2*20)+','+(.55+.1*S.think)+')';ctx.stroke();
+  ctx.strokeStyle='rgba(255,'+(190+f2*8)+','+(70+f2*12)+','+(.6+.1*S.think)+')';ctx.stroke();
  }
 
  /* rotating dashed rings that ripple with the voice */
- var RR=[.62,.97,1.2],TT=[1.2,.5,1.5],RS=['rgba(255,215,130,.8)','rgba(255,150,35,.35)','rgba(255,175,60,.6)'],RW=[1.3,2.6,1.2];
+ var RR=[.5,.78,1.14],TT=[.9,.6,1.35],RS=['rgba(255,215,130,.8)','rgba(255,150,35,.35)','rgba(255,175,60,.6)'],RW=[1.3,2.6,1.2];
  for(var j2=0;j2<3;j2++){
   var tj=TT[j2]+.15*Math.sin(now/2000+j2),yj=sp2*(j2%2?-1.6:1.4)*(1+S.think*1.4),
    ctj=Math.cos(tj),stj=Math.sin(tj),cyj=Math.cos(yj),syj=Math.sin(yj),pen=false;
@@ -834,7 +837,7 @@ frame=function(now){
 var css5=document.createElement('style');css5.textContent=`
 #halo{background:radial-gradient(circle,rgba(255,160,40,.32),rgba(255,120,20,.09) 45%,rgba(0,0,0,0) 70%)}
 #stage{background:radial-gradient(900px 520px at 50% 0%,rgba(255,150,40,.13),transparent 62%),var(--bg)}
-/* 3D golden loading orb (replaces the old spark logo) */
+/* 3D golden loading orb (shown before the answer starts) */
 .msg.assistant.typing{font-size:0!important;width:46px;height:46px;min-height:0;padding:0;margin:2px 0 0 4px;border:0;border-radius:50%;box-shadow:none;position:relative;perspective:240px;
  background:radial-gradient(circle,#fff6d0 0,#ffc04a 14%,rgba(255,130,10,.45) 34%,rgba(255,110,0,0) 62%);animation:jcore 1.6s ease-in-out infinite}
 .msg.assistant.typing::before,.msg.assistant.typing::after{content:"";position:absolute;display:block;width:auto;height:auto;inset:3px;border-radius:50%;box-sizing:border-box;background:none}
