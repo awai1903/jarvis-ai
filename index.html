@@ -653,7 +653,13 @@ $('gmodel').oninput=function(){cfg.gmodel=this.value.trim()||GM;saveCfg()};
 $('gtest').onclick=function(){
  if(!cfg.gkey){$('cstat').textContent='Enter your Gemini key first.';return}
  cfg.gon=true;$('gon').checked=true;saveCfg();$('cstat').textContent='Testing…';demo();
-};
+}; 
+ /* ---------- Speak only in voice mode ---------- */
+var _sp2=speak,_say2=say,_demo=demo,prev=false;
+speak=function(t){if(!vm&&!prev){setState('idle');return}_sp2(t)};
+say=function(t,id){if(!vm)return;_say2(t,id)};
+demo=function(){prev=true;try{_demo()}finally{prev=false}};
+ 
 /* ---------- Particle orb ---------- */
 var SP=[];for(var h=0;h<12;h++){var c=document.createElement('canvas');c.width=c.height=48;var g=c.getContext('2d');
  var gr=g.createRadialGradient(24,24,0,24,24,24);gr.addColorStop(0,'hsla('+h*30+',100%,92%,1)');gr.addColorStop(.25,'hsla('+h*30+',100%,72%,.55)');gr.addColorStop(1,'hsla('+h*30+',100%,60%,0)');
