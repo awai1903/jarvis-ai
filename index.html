@@ -1161,6 +1161,23 @@ body.vs-open #vsheet{transform:none}
 .vt span{font-size:14px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vrow select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px}
 `;document.head.appendChild(css8);
+})(); 
+ /* ---------- Human-sounding voice (style prompt + spoken-style replies) ---------- */
+(function(){
+/* 1) the AI writes the way people talk */
+INSTR='You are Jarvis, a warm and witty personal assistant who talks like a real person in a relaxed conversation. '+
+ 'Use short natural sentences and contractions. Now and then use a light filler such as "well", "hmm" or "right" when it fits, and react to the mood of the user. '+
+ 'Reply in the same language the user spoke (Urdu, Roman Urdu, Hindi or English). Keep it to one to three short sentences. '+
+ 'No markdown, lists, emojis or stage directions.';
+
+/* 2) tell the Gemini voice HOW to speak, not just what to say */
+var STYLE='Say the following like a real, warm human in a relaxed conversation, not like a robot reading text. '+
+ 'Natural pace, small pauses, gentle emotion, calm and slightly low, with a refined British butler feel: ';
+var _gf=gFetch;
+gFetch=function(t){return _gf(STYLE+t)};
+
+/* 3) use the Gemini voice automatically once a Gemini key is saved */
+if(cfg.gon===undefined&&cfg.gkey){cfg.gon=true;saveCfg()}
 })();
 /* ---------- Particle orb ---------- */
 var SP=[];for(var h=0;h<12;h++){var c=document.createElement('canvas');c.width=c.height=48;var g=c.getContext('2d');
