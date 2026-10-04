@@ -668,6 +668,54 @@ var css4=document.createElement('style');css4.textContent=`
 @keyframes sparkgo{0%{transform:rotate(0) scale(.85)}50%{transform:rotate(180deg) scale(1.12)}100%{transform:rotate(360deg) scale(.85)}}
 @media (prefers-reduced-motion:reduce){.msg.assistant.typing::before{animation-duration:6s}}
 `;document.head.appendChild(css4);
+ /* ---------- Voice mode v2 ---------- */
+runVm=function(){
+ var r=new SR();
+ r.lang=LANG;r.interimResults=true;r.continuous=false;vmRec=r;
+ r.onresult=function(e){
+  var t=mergeRes(e);if(!t)return;vmTxt=t;
+  if(!liveEl){liveEl=addMsg('user','');liveEl.classList.add('live')}
+  liveEl.textContent=vmTxt;scrollEnd();
+  clearTimeout(vmT);
+  vmT=setTimeout(vmSend,e.results[e.results.length-1].isFinal?900:2000);
+ };
+ r.onerror=function(e){
+  if(e.error==='no-speech'||e.error==='aborted')return;
+  vmEnd(e.error==='network'?'Speech recognition needs an internet connection.':'Microphone problem: '+e.error+'. Allow mic access or type instead.');
+ };
+ r.onend=function(){
+  if(vmRec!==r)return;vmRec=null;
+  if(!vm||state!=='listening')return;
+  if(vmTxt.trim()){clearTimeout(vmT);vmSend();return}
+  setTimeout(function(){if(vm&&state==='listening'&&!vmRec)runVm()},150);
+ };
+ try{r.start()}catch(e){vmRec=null}
+};
+vmSend=function(){
+ var t=vmTxt.trim();vmTxt='';clearTimeout(vmT);killVm();
+ if(!t){if(vm&&state==='listening')runVm();return}
+ setCaption('');
+ try{ask(t)}catch(e){setState('idle');setCaption('Something went wrong. Try again.');if(vm)setTimeout(vmListen,700)}
+};
+
+/* watchdog: phone voice finished but "onend" never fired */
+var wdN=0;
+setInterval(function(){
+ if(vm&&state==='speaking'&&!useG()&&streamDone&&'speechSynthesis' in window&&!speechSynthesis.speaking&&!speechSynthesis.pending){
+  if(++wdN>=3){wdN=0;pend=0;setState('idle')}
+ }else wdN=0;
+},700);
+
+/* orb tap: interrupt while busy, end voice mode while listening */
+orb.onclick=function(){
+ if(state==='speaking'||state==='thinking'){var c=cur;toggle();if(c&&c.classList.contains('typing'))c.remove();return}
+ if(vm)vmEnd();
+};
+
+/* remove red cross, replace note */
+var vendEl=$('vend');if(vendEl)vendEl.remove();
+var vnote=vb.querySelector('.note');
+if(vnote)vnote.innerHTML='<a href="https://support.anthropic.com/en/articles/8525154-claude-is-providing-incorrect-or-misleading-responses-what-s-going-on" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">Jarvis is AI and can make mistakes. Please double-check responses.</a>';
  
 /* ---------- Particle orb ---------- */
 var SP=[];for(var h=0;h<12;h++){var c=document.createElement('canvas');c.width=c.height=48;var g=c.getContext('2d');
