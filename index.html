@@ -3,7 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-<title>Orb Assistant</title>
+<title>Jarvis AI Assistant</title>
+<meta name="description" content="Jarvis AI Assistant: a voice assistant with a glowing particle orb. Bring your own API key.">
+<meta name="theme-color" content="#0a0c14">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23e8730c'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23ffc04a'/%3E%3C/svg%3E">
 <style>
 :root{--bg:#0a0c14;--surf:#151927;--surf2:#1f2538;--line:#2a3045;--fg:#eef1fa;--dim:#8d96ad;--accent:#4f8cff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0a0c14}}
@@ -45,7 +48,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .fld option{color:#111}
 .row{display:flex;gap:8px;margin-top:16px}
 .pill{flex:1;border-radius:999px;padding:10px 6px;border:1px solid var(--line);background:var(--surf2);color:var(--fg);font-size:14px;cursor:pointer}
-#save{background:var(--accent);border-color:var(--accent)}
+#save{background:#2a68e0;border-color:#2a68e0;color:#fff}
 .pill:focus-visible,.fld:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .note{font-size:12px;color:var(--dim);line-height:1.4;margin:12px 0 0}
 </style>
@@ -310,7 +313,7 @@ html,body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif
 #state[data-s=thinking]::before{background:#fbbf24;box-shadow:0 0 10px #fbbf24;animation:blink 1s infinite}
 #state[data-s=speaking]::before{background:#60a5fa;box-shadow:0 0 10px #60a5fa}
 .msg{animation:pop .28s ease}
-.msg.user{background:linear-gradient(135deg,#3b6cff,#7a5cff);border:0;color:#fff;box-shadow:0 6px 18px rgba(80,100,255,.25)}
+.msg.user{background:linear-gradient(135deg,#335ff0,#6e4fee);border:0;color:#fff;box-shadow:0 6px 18px rgba(80,100,255,.25)}
 .msg.assistant{background:rgba(255,255,255,.05);border:1px solid var(--line);padding:10px 14px;border-radius:18px 18px 18px 4px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 .msg.typing{animation:blink 1.1s infinite}
 #bar{background:rgba(21,25,39,.72);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(120,150,255,.25);box-shadow:0 10px 34px rgba(0,0,0,.45);transition:border-color .25s,box-shadow .25s}
@@ -370,9 +373,9 @@ fail=function(m,el){
 /* settings UI */
 var sec=document.createElement('div');
 sec.innerHTML='<label>Auto switch APIs by task</label>'+
- '<div style="display:flex;align-items:center;gap:8px"><input id="autosw" type="checkbox"><span class="note" style="margin:0">On: best API for each question, and falls back if one fails. The API above is "Main".</span></div>'+
+ '<div style="display:flex;align-items:center;gap:8px"><input id="autosw" type="checkbox" aria-label="Auto switch APIs by task"><span class="note" style="margin:0">On: best API for each question, and falls back if one fails. The API above is "Main".</span></div>'+
  '<div id="plist"></div>'+
- '<select id="padd" class="fld" style="margin-top:10px"><option value="">+ Add API…</option>'+Object.keys(PRE).map(function(k){return '<option>'+k+'</option>'}).join('')+'</select>';
+ '<select id="padd" class="fld" aria-label="Add an API provider" style="margin-top:10px"><option value="">+ Add API…</option>'+Object.keys(PRE).map(function(k){return '<option>'+k+'</option>'}).join('')+'</select>';
 $('newchat').insertAdjacentElement('beforebegin',sec);
 function fld(i,f,ph,type){var e=document.createElement('input');e.className='fld';e.style.marginTop='6px';e.placeholder=ph;e.type=type||'text';e.value=cfg.provs[i][f]||'';e.autocomplete='off';e.spellcheck=false;e.oninput=function(){cfg.provs[i][f]=e.value.trim();saveCfg()};return e}
 function drawP(){
@@ -584,7 +587,7 @@ if(typeof vl!=='undefined'&&vl.children){
 /* settings UI */
 var gs=document.createElement('div');
 gs.innerHTML='<label>Natural voice (Gemini)</label>'+
- '<div style="display:flex;align-items:center;gap:8px"><input id="gon" type="checkbox"><span class="note" style="margin:0">Use Gemini AI voice for replies. Falls back to the phone voice if it fails.</span></div>'+
+ '<div style="display:flex;align-items:center;gap:8px"><input id="gon" type="checkbox" aria-label="Use Gemini voice for replies"><span class="note" style="margin:0">Use Gemini AI voice for replies. Falls back to the phone voice if it fails.</span></div>'+
  '<label for="gkey">Gemini API key</label><input id="gkey" class="fld" type="password" autocomplete="off" spellcheck="false" placeholder="AIza...">'+
  '<label for="gmodel">TTS model</label><input id="gmodel" class="fld" autocomplete="off" spellcheck="false">'+
  '<button id="gtest" class="pill" style="width:100%;margin-top:10px">Test Gemini voice</button>';
@@ -658,7 +661,7 @@ orb.onclick=function(){
 /* remove red cross, replace note */
 var vendEl=$('vend');if(vendEl)vendEl.remove();
 var vnote=vb.querySelector('.note');
-if(vnote)vnote.innerHTML='<a href="https://support.anthropic.com/en/articles/8525154-claude-is-providing-incorrect-or-misleading-responses-what-s-going-on" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">Jarvis is AI and can make mistakes. Please double-check responses.</a>';
+if(vnote)vnote.textContent='Jarvis is AI and can make mistakes. Please double-check responses.';
  /* ---------- Golden holographic orb (Jarvis style) ---------- */
 (function(){
 var N2=1400,Q=[];
@@ -826,7 +829,7 @@ function go(t){
  tab=t;document.body.setAttribute('data-tab',t);
  $('panel').hidden=(t!=='settings');
  if(t==='settings')fillForm();
- [].forEach.call(nav.querySelectorAll('.t'),function(b){b.classList.toggle('on',b.dataset.t===t)});
+ [].forEach.call(nav.querySelectorAll('.t'),function(b){b.classList.toggle('on',b.dataset.t===t);b.setAttribute('aria-current',b.dataset.t===t?'page':'false')});
  window.dispatchEvent(new Event('resize'));fitHome();
  if(t==='chat')setTimeout(scrollEnd,0);
 }
@@ -858,7 +861,7 @@ var css6=document.createElement('style');css6.textContent=`
 body.kb{--nav:0px}
 #hero,#gear,#wave{display:none!important}
 #app{bottom:calc(var(--nav) + env(safe-area-inset-bottom,0px))}
-#dock{padding-bottom:10px}
+#dock{padding-bottom:22px}
 body[data-tab=home] #app,body[data-tab=triggers] #app,body[data-tab=settings] #app{display:none}
 body[data-tab=home] #stage{visibility:visible}
 
@@ -873,7 +876,7 @@ body[data-tab=home] #home{display:flex}
 
 #panel{top:calc(14px + env(safe-area-inset-top,0px));left:max(12px,calc((100% - 560px)/2));right:auto;width:min(560px,calc(100% - 24px));bottom:calc(var(--nav) + 16px + env(safe-area-inset-bottom,0px));max-height:none;z-index:6}
 
-#nav{position:fixed;left:0;right:0;bottom:0;z-index:8;display:grid;grid-template-columns:1fr 1fr 92px 1fr 1fr;align-items:end;padding:0 14px calc(8px + env(safe-area-inset-bottom,0px));box-sizing:border-box}
+#nav{position:fixed;left:0;right:0;width:min(100%,560px);margin:0 auto;bottom:0;z-index:8;display:grid;grid-template-columns:1fr 1fr 92px 1fr 1fr;align-items:end;padding:0 14px calc(8px + env(safe-area-inset-bottom,0px));box-sizing:border-box}
 #nav::before{content:"";position:absolute;left:10px;right:10px;bottom:calc(8px + env(safe-area-inset-bottom,0px));height:62px;border-radius:22px;background:rgba(18,21,34,.93);border:1px solid rgba(255,170,60,.18);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 8px 30px rgba(0,0,0,.5)}
 #nav>*{position:relative}
 body.kb #nav{display:none}
@@ -989,7 +992,7 @@ var CH='<svg class="vch" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>';
 var btn=document.createElement('button');btn.id='vset';btn.setAttribute('aria-label','Voice settings');
 btn.innerHTML='<svg viewBox="0 0 24 24"><path d="M3 8h8M17 8h4M3 16h3M12 16h9"/><circle cx="14" cy="8" r="2.4"/><circle cx="9" cy="16" r="2.4"/></svg>';
 var back=document.createElement('div');back.id='vback';
-var sh=document.createElement('div');sh.id='vsheet';sh.setAttribute('role','dialog');sh.setAttribute('aria-label','Voice settings');
+var sh=document.createElement('div');sh.id='vsheet';sh.setAttribute('role','dialog');sh.setAttribute('aria-modal','true');sh.setAttribute('aria-label','Voice settings');
 sh.innerHTML=
  '<div id="vhead"><div class="vh"></div><div id="vname"></div><div id="vtag"></div><div id="vdots"></div></div>'+
  '<div class="vrow"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><div class="vt"><b>Language</b><span id="vlangt"></span></div>'+CH+'<select id="vlang" aria-label="Language"></select></div>'+
@@ -1042,8 +1045,8 @@ function applyOut(){
 function outs(){
  var s=$('vout');
  function fill(list){
-  s.innerHTML='<option value="">Speaker</option>'+list.map(function(d,i){
-   var nm=d.label||('Output '+(i+1));return '<option value="'+d.deviceId+'">'+nm.replace(/</g,'&lt;')+'</option>'}).join('');
+  s.textContent='';
+  [{deviceId:'',label:'Speaker'}].concat(list).forEach(function(d,i){var o=document.createElement('option');o.value=d.deviceId;o.textContent=d.label||('Output '+i);s.appendChild(o)});
   s.value=cfg.out||'';if(s.selectedIndex<0)s.value='';
   $('voutt').textContent=s.options[s.selectedIndex].textContent;
  }
@@ -1158,10 +1161,13 @@ P.textContent='';[head,ai,vc,pv,adv,legacy,sb].forEach(function(e){P.appendChild
 function sync(){var k=Object.keys(PRE).filter(function(k){return PRE[k][0]&&PRE[k][0]===$('base').value})[0];$('prov').value=k||'Custom'}
 $('prov').onchange=function(){var p=PRE[this.value];if(p&&p[0]){$('base').value=p[0];if(p[1])$('model').value=p[1]}else adv.open=true};
 $('base').addEventListener('input',sync);
-function conn(){var any=$('key').value.trim()||cfg.key||cfg.provs.some(function(p){return p.key}),c=$('conn');c.className='conn '+(any?'ok':'off');c.lastChild.textContent=any?'Key saved · '+($('model').value||cfg.model):'No API key · using built-in replies'}
+function conn(){var any=$('key').value.trim()||cfg.key||cfg.provs.some(function(p){return p.key}),c=$('conn');c.className='conn '+(any?'ok':'off');c.lastChild.textContent=any?'Key saved · '+($('model').value||cfg.model):'No API key · tap here to add one'}
 ['key','model'].forEach(function(i){$(i).addEventListener('input',conn)});
 ['clear','save'].forEach(function(i){$(i).addEventListener('click',function(){setTimeout(conn,0)})});
-var _ff=fillForm;fillForm=function(){_ff();sync();conn()};
+var _ff=fillForm;fillForm=function(){_ff();sync();conn();if(!(cfg.key||cfg.provs.some(function(p){return p.key})))adv.open=true};
+function openKey(){adv.open=true;$('key').focus()}
+$('conn').style.cursor='pointer';$('conn').style.padding='8px 0';$('conn').setAttribute('role','button');$('conn').tabIndex=0;
+$('conn').addEventListener('click',openKey);$('conn').addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();openKey()}});
 
 var css9=document.createElement('style');css9.textContent=`
 #panel{padding:18px 16px 0}
@@ -1191,9 +1197,9 @@ T.innerHTML='<div class="sh"><h2>Triggers</h2><p>Things Jarvis does for you auto
  '<section class="scard"><h3>Wake word</h3><label class="trow"><input id="twake" type="checkbox"><span>Say “Hey Jarvis” to start voice mode</span></label><p class="note">Off by default. Works only while this page is open and the screen is on, and keeps the microphone listening.</p></section>'+
  '<section class="scard"><h3>Reminders &amp; timers</h3><p class="note" style="margin:2px 0 8px">Say or type: “remind me in 10 minutes to call Ali” or “set a timer for 5 minutes”.</p>'+
  '<label class="trow"><input id="tnotif" type="checkbox"><span>Show a phone notification too</span></label><div id="rlist"></div>'+
- '<div class="tform"><input id="rtxt" class="fld" placeholder="Remind me to…" autocomplete="off"><select id="rmin" class="fld"><option value="1">1 min</option><option value="5">5 min</option><option value="10">10 min</option><option value="30">30 min</option><option value="60">1 hour</option></select><button id="radd" class="pill">Add</button></div></section>'+
+ '<div class="tform"><input id="rtxt" class="fld" placeholder="Remind me to…" aria-label="Reminder text" autocomplete="off"><select id="rmin" class="fld" aria-label="Remind after"><option value="1">1 min</option><option value="5">5 min</option><option value="10">10 min</option><option value="30">30 min</option><option value="60">1 hour</option></select><button id="radd" class="pill">Add</button></div></section>'+
  '<section class="scard"><h3>Custom phrases</h3><p class="note" style="margin:2px 0 8px">When you say or type a phrase, Jarvis does the action you choose.</p><div id="plist2"></div>'+
- '<div class="tform col"><input id="ptxt" class="fld" placeholder="Phrase, e.g. good night" autocomplete="off"><select id="pact" class="fld"><option value="say">Jarvis says…</option><option value="open">Open this link</option><option value="ask">Ask the AI this instead</option></select><input id="pval" class="fld" placeholder="Reply, link or question" autocomplete="off"><button id="padd2" class="pill">Add phrase</button></div></section>';
+ '<div class="tform col"><input id="ptxt" class="fld" placeholder="Phrase, e.g. good night" aria-label="Trigger phrase" autocomplete="off"><select id="pact" class="fld" aria-label="Action"><option value="say">Jarvis says…</option><option value="open">Open this link</option><option value="ask">Ask the AI this instead</option></select><input id="pval" class="fld" placeholder="Reply, link or question" aria-label="Reply, link or question" autocomplete="off"><button id="padd2" class="pill">Add phrase</button></div></section>';
 
 function norm(s){return s.toLowerCase().replace(/[?.!,،۔؟]/g,' ').replace(/\s+/g,' ').trim()}
 function clock(ms){return new Date(ms).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}
@@ -1221,10 +1227,10 @@ function fire(x,late){
 function sched(x){clearTimeout(tm[x.id]);tm[x.id]=setTimeout(function(){fire(x)},Math.max(0,x.at-Date.now()))}
 function addRem(ms,msg){var x={id:Date.now()+Math.random(),at:Date.now()+ms,msg:msg||'Time is up'};cfg.rem.push(x);saveCfg();sched(x);draw();return x}
 function parseRem(t){
- var s=norm(t),m=s.match(/(?:remind me|set (?:a |an )?(?:reminder|timer|alarm))\s*(?:in|for|after)?\s*(\d+|an|a|one)\s*(second|sec|minute|min|hour|hr)s?\s*(?:to|that|about)?\s*(.*)$/);
- if(!m&&/yaad|remind/.test(s)){m=s.match(/(\d+)\s*(second|sec|minute|min|mint|hour|ghanta|ghantay|ghante)\s*(?:ke )?(?:baad|bad)\s*(.*?)(?:\s*(?:yaad dila\w*|remind\w*))?$/)}
+ var s=norm(t),c=t.replace(/[?.!,،۔؟]/g,' ').replace(/\s+/g,' ').trim(),m=c.match(/(?:remind me|set (?:a |an )?(?:reminder|timer|alarm))\s*(?:in|for|after)?\s*(\d+|an|a|one)\s*(second|sec|minute|min|hour|hr)s?\s*(?:to|that|about)?\s*(.*)$/i);
+ if(!m&&/yaad|remind/.test(s)){m=c.match(/(\d+)\s*(second|sec|minute|min|mint|hour|ghanta|ghantay|ghante)\s*(?:ke )?(?:baad|bad)\s*(.*?)(?:\s*(?:yaad dila\w*|remind\w*))?$/i)}
  if(!m)return null;
- var n=/^\d/.test(m[1])?+m[1]:1,u=m[2],ms=n*(/^s/.test(u)?1000:/^m/.test(u)?60000:3600000);
+ var n=/^\d/.test(m[1])?+m[1]:1,u=m[2].toLowerCase(),ms=n*(/^s/.test(u)?1000:/^m/.test(u)?60000:3600000);
  if(!ms||ms>864e5)return null;
  return{ms:ms,n:n,u:u,msg:(m[3]||'').trim()};
 }
@@ -1266,6 +1272,7 @@ cfg.rem.slice().forEach(function(x){if(x.at<=Date.now())setTimeout(function(){fi
 var css10=document.createElement('style');css10.textContent=`
 body[data-tab=triggers] #trig{display:flex;align-items:stretch;justify-content:flex-start;text-align:left;pointer-events:auto;padding:calc(18px + env(safe-area-inset-top,0px)) 16px 20px}
 #trig .scard{flex:none}
+#trig>*{align-self:center;width:min(100%,560px);box-sizing:border-box}
 .trow{display:flex;align-items:center;gap:10px;margin:10px 0 4px;font-size:15px;color:var(--fg)}
 .trow input{width:20px;height:20px;accent-color:#ffb347;flex:none}
 .titem{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line);font-size:15px}
@@ -1274,6 +1281,7 @@ body[data-tab=triggers] #trig{display:flex;align-items:stretch;justify-content:f
 .tform{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
 .tform .fld{flex:1 1 140px;width:auto}.tform .pill{flex:none;padding:10px 18px}
 .tform.col{flex-direction:column}.tform.col .fld,.tform.col .pill{flex:none;width:100%}
+@media (prefers-reduced-motion:reduce){.msg,#panel,body.fresh #hero{animation:none}#vsheet{transition:none}#mic.rec,body.vmode #navc,#navc::before{animation:none}.msg.assistant.typing::before,.msg.assistant.typing::after,.alogo::before,.alogo::after{animation-duration:8s}}
 `;document.head.appendChild(css10);
 })();
 
