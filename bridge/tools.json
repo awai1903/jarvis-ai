@@ -1,0 +1,342 @@
+{
+  "version": 1,
+  "note": "One source of truth for every action Jarvis can perform on the phone. The bridge exposes these to the app as OpenAI tool/function schemas; the app never hard-codes them.",
+  "tools": [
+    {
+      "name": "battery_status",
+      "title": "Battery status",
+      "group": "Device",
+      "kind": "command",
+      "cmd": "termux-battery-status",
+      "argv": [],
+      "output": "json",
+      "description": "Read the phone battery level, temperature, health and charging state.",
+      "args": []
+    },
+    {
+      "name": "network_info",
+      "title": "Wi-Fi / network info",
+      "group": "Device",
+      "kind": "command",
+      "cmd": "termux-wifi-connectioninfo",
+      "argv": [],
+      "output": "json",
+      "description": "Read the current Wi-Fi connection: SSID, IP address, link speed and signal strength.",
+      "args": []
+    },
+    {
+      "name": "device_info",
+      "title": "Device / SIM info",
+      "group": "Device",
+      "kind": "command",
+      "cmd": "termux-telephony-deviceinfo",
+      "argv": [],
+      "output": "json",
+      "description": "Read device and SIM information such as network operator and country.",
+      "args": []
+    },
+    {
+      "name": "location",
+      "title": "Location",
+      "group": "Device",
+      "kind": "command",
+      "cmd": "termux-location",
+      "argv": ["-p", "{provider}", "-r", "{request}"],
+      "output": "json",
+      "description": "Get the phone's current location (latitude, longitude, accuracy, speed).",
+      "args": [
+        { "name": "provider", "type": "string", "enum": ["network", "gps", "passive"], "default": "network", "description": "Location provider to use" },
+        { "name": "request", "type": "string", "enum": ["once", "last"], "default": "once", "description": "once = fresh fix, last = last known" }
+      ]
+    },
+    {
+      "name": "volume_get",
+      "title": "Read volume",
+      "group": "Device",
+      "kind": "command",
+      "cmd": "termux-volume",
+      "argv": [],
+      "output": "json",
+      "description": "Read the current volume of every audio stream (music, call, ring, alarm, notification, system).",
+      "args": []
+    },
+    {
+      "name": "volume_set",
+      "title": "Set volume",
+      "group": "Device",
+      "kind": "command",
+      "cmd": "termux-volume",
+      "argv": ["{stream}", "{level}"],
+      "output": "text",
+      "description": "Change the volume of one audio stream, for example the music volume.",
+      "args": [
+        { "name": "stream", "type": "string", "enum": ["music", "call", "ring", "alarm", "notification", "system"], "required": true, "description": "Which audio stream to change" },
+        { "name": "level", "type": "integer", "min": 0, "max": 15, "required": true, "description": "New volume level from 0 to 15" }
+      ]
+    },
+    {
+      "name": "brightness_set",
+      "title": "Set screen brightness",
+      "group": "Device",
+      "kind": "command",
+      "cmd": "termux-brightness",
+      "argv": ["{level}"],
+      "output": "text",
+      "description": "Set the screen brightness. 0 is darkest, 255 is brightest.",
+      "args": [{ "name": "level", "type": "integer", "min": 0, "max": 255, "required": true, "description": "Brightness from 0 to 255" }]
+    },
+    {
+      "name": "torch",
+      "title": "Flashlight",
+      "group": "Device",
+      "kind": "command",
+      "cmd": "termux-torch",
+      "argv": ["{state}"],
+      "output": "text",
+      "description": "Turn the phone flashlight on or off.",
+      "args": [{ "name": "state", "type": "string", "enum": ["on", "off"], "required": true, "description": "on or off" }]
+    },
+    {
+      "name": "vibrate",
+      "title": "Vibrate",
+      "group": "Device",
+      "kind": "command",
+      "cmd": "termux-vibrate",
+      "argv": ["-d", "{ms}"],
+      "output": "text",
+      "description": "Vibrate the phone for a number of milliseconds.",
+      "args": [{ "name": "ms", "type": "integer", "min": 50, "max": 10000, "default": 400, "description": "Vibration length in milliseconds" }]
+    },
+    {
+      "name": "get_time",
+      "title": "Date and time",
+      "group": "Device",
+      "kind": "command",
+      "cmd": "date",
+      "argv": ["+%Y-%m-%d %H:%M:%S %Z (%A)"],
+      "output": "text",
+      "description": "Read the phone's current date, time and timezone.",
+      "args": []
+    },
+    {
+      "name": "send_sms",
+      "title": "Send SMS",
+      "group": "Messages",
+      "kind": "command",
+      "cmd": "termux-sms-send",
+      "argv": ["-n", "{number}", "{message}"],
+      "output": "text",
+      "danger": true,
+      "description": "Send a text message (SMS) from this phone to a phone number.",
+      "args": [
+        { "name": "number", "type": "string", "required": true, "pattern": "^\\+?[0-9][0-9 \\-]{3,19}$", "description": "Recipient phone number in international or local format" },
+        { "name": "message", "type": "string", "required": true, "max": 480, "description": "The message text" }
+      ]
+    },
+    {
+      "name": "read_sms",
+      "title": "Read SMS",
+      "group": "Messages",
+      "kind": "command",
+      "cmd": "termux-sms-list",
+      "argv": ["-l", "{limit}", "-t", "{box}"],
+      "output": "json",
+      "maxOutput": 6000,
+      "description": "Read recent text messages from the phone's SMS inbox or sent box.",
+      "args": [
+        { "name": "limit", "type": "integer", "min": 1, "max": 50, "default": 10, "description": "How many messages to read" },
+        { "name": "box", "type": "string", "enum": ["inbox", "sent", "all"], "default": "inbox", "description": "Which mailbox to read" }
+      ]
+    },
+    {
+      "name": "call_number",
+      "title": "Phone call",
+      "group": "Messages",
+      "kind": "command",
+      "cmd": "termux-telephony-call",
+      "argv": ["{number}"],
+      "output": "text",
+      "danger": true,
+      "description": "Place a phone call to a number. This really dials out.",
+      "args": [{ "name": "number", "type": "string", "required": true, "pattern": "^\\+?[0-9][0-9 \\-]{3,19}$", "description": "Phone number to call" }]
+    },
+    {
+      "name": "contacts_search",
+      "title": "Contacts",
+      "group": "Messages",
+      "kind": "command",
+      "cmd": "termux-contact-list",
+      "argv": [],
+      "output": "json",
+      "maxOutput": 6000,
+      "description": "List the phone's contacts (name and number) so you can look someone up.",
+      "args": []
+    },
+    {
+      "name": "notification_list",
+      "title": "Read notifications",
+      "group": "Messages",
+      "kind": "command",
+      "cmd": "termux-notification-list",
+      "argv": [],
+      "output": "json",
+      "maxOutput": 6000,
+      "description": "Read the notifications currently shown by other apps.",
+      "args": []
+    },
+    {
+      "name": "notify",
+      "title": "Show notification",
+      "group": "Messages",
+      "kind": "command",
+      "cmd": "termux-notification",
+      "argv": ["--title", "{title}", "--content", "{content}"],
+      "output": "text",
+      "description": "Show a notification on the phone from Jarvis.",
+      "args": [
+        { "name": "title", "type": "string", "required": true, "max": 120, "description": "Notification title" },
+        { "name": "content", "type": "string", "required": true, "max": 400, "description": "Notification body" }
+      ]
+    },
+    {
+      "name": "clipboard_get",
+      "title": "Read clipboard",
+      "group": "Messages",
+      "kind": "command",
+      "cmd": "termux-clipboard-get",
+      "argv": [],
+      "output": "text",
+      "maxOutput": 2000,
+      "description": "Read whatever text is currently copied on the phone.",
+      "args": []
+    },
+    {
+      "name": "clipboard_set",
+      "title": "Copy to clipboard",
+      "group": "Messages",
+      "kind": "command",
+      "cmd": "termux-clipboard-set",
+      "argv": ["{text}"],
+      "output": "text",
+      "description": "Copy text to the phone clipboard so the user can paste it elsewhere.",
+      "args": [{ "name": "text", "type": "string", "required": true, "max": 4000, "description": "Text to copy" }]
+    },
+    {
+      "name": "speak_text",
+      "title": "Speak out loud",
+      "group": "Media and apps",
+      "kind": "command",
+      "cmd": "termux-tts-speak",
+      "argv": ["{text}"],
+      "output": "text",
+      "description": "Speak text out loud using the phone's text-to-speech engine (works even when the screen is off or the app is closed).",
+      "args": [{ "name": "text", "type": "string", "required": true, "max": 1000, "description": "Text to speak" }]
+    },
+    {
+      "name": "toast",
+      "title": "On-screen toast",
+      "group": "Media and apps",
+      "kind": "command",
+      "cmd": "termux-toast",
+      "argv": ["{text}"],
+      "output": "text",
+      "description": "Show a short pop-up message on screen.",
+      "args": [{ "name": "text", "type": "string", "required": true, "max": 200, "description": "Message to show" }]
+    },
+    {
+      "name": "camera_photo",
+      "title": "Take a photo",
+      "group": "Media and apps",
+      "kind": "command",
+      "cmd": "termux-camera-photo",
+      "argv": ["-c", "{camera}", "{path}"],
+      "output": "text",
+      "description": "Take a photo with the front or back camera and save it to a file.",
+      "args": [
+        { "name": "camera", "type": "string", "enum": ["0", "1"], "default": "0", "description": "0 = back camera, 1 = front camera" },
+        { "name": "path", "type": "string", "default": "", "description": "Where to save the photo. Leave empty to save into the phone's Pictures folder with a timestamped name." }
+      ]
+    },
+    {
+      "name": "open_url",
+      "title": "Open a link",
+      "group": "Media and apps",
+      "kind": "command",
+      "cmd": "termux-open-url",
+      "argv": ["{url}"],
+      "output": "text",
+      "description": "Open a web page in the phone's browser.",
+      "args": [{ "name": "url", "type": "string", "required": true, "pattern": "^https?://\\S+$", "max": 2000, "description": "URL to open, must start with http:// or https://" }]
+    },
+    {
+      "name": "launch_app",
+      "title": "Open an app",
+      "group": "Media and apps",
+      "kind": "command",
+      "cmd": "monkey",
+      "argv": ["-p", "{package}", "-c", "android.intent.category.LAUNCHER", "1"],
+      "output": "text",
+      "description": "Launch another app on the phone by its package name, for example com.whatsapp or com.google.android.youtube.",
+      "args": [{ "name": "package", "type": "string", "required": true, "pattern": "^[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z0-9_]+)+$", "description": "Android package name of the app to open" }]
+    },
+    {
+      "name": "list_files",
+      "title": "List files",
+      "group": "Files",
+      "kind": "command",
+      "cmd": "ls",
+      "argv": ["-la", "{path}"],
+      "output": "text",
+      "maxOutput": 4000,
+      "description": "List files in a folder on the phone. Only inside the home folder or shared storage.",
+      "args": [{ "name": "path", "type": "string", "guard": "path", "required": true, "description": "Folder path, for example ~/storage/shared/Download" }]
+    },
+    {
+      "name": "read_file",
+      "title": "Read a file",
+      "group": "Files",
+      "kind": "command",
+      "cmd": "cat",
+      "argv": ["{path}"],
+      "output": "text",
+      "maxOutput": 4000,
+      "description": "Read a text file from the phone (notes, CSV, logs). Only inside the home folder or shared storage.",
+      "args": [{ "name": "path", "type": "string", "guard": "path", "required": true, "description": "File path to read" }]
+    },
+    {
+      "name": "note_save",
+      "title": "Remember something",
+      "group": "Memory",
+      "kind": "impl",
+      "impl": "note_save",
+      "output": "text",
+      "description": "Save a long-term note or memory on the phone so it can be recalled later, for example a preference or an important fact.",
+      "args": [{ "name": "text", "type": "string", "required": true, "max": 1000, "description": "The fact or note to remember" }]
+    },
+    {
+      "name": "note_list",
+      "title": "Recall memories",
+      "group": "Memory",
+      "kind": "impl",
+      "impl": "note_list",
+      "output": "text",
+      "maxOutput": 4000,
+      "description": "List everything Jarvis has been told to remember.",
+      "args": []
+    },
+    {
+      "name": "run_command",
+      "title": "Run a shell command",
+      "group": "Power",
+      "kind": "shell",
+      "cmd": "sh",
+      "argv": ["-c", "{command}"],
+      "output": "text",
+      "maxOutput": 4000,
+      "danger": true,
+      "defaultOff": true,
+      "description": "Run any Termux shell command on the phone. Use this for anything the other tools cannot do, for example copying files, using ffmpeg, or scripting.",
+      "args": [{ "name": "command", "type": "string", "required": true, "max": 2000, "description": "The shell command to run, for example: ls ~/storage/shared | head" }]
+    }
+  ]
+}

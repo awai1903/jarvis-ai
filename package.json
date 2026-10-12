@@ -1,0 +1,16 @@
+{
+  "name": "jarvis-ai",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Jarvis AI \u2014 voice assistant with a particle orb that can also act on your own phone (personal build). Single page, no build step.",
+  "scripts": {
+    "test": "node test/smoke.mjs && node test/brain.mjs && node test/bridge.mjs && node test/device.mjs && node test/pwa.mjs && node test/contrast.mjs",
+    "start": "node tools/serve.mjs",
+    "bridge": "python3 bridge/jarvis_bridge.py --root .",
+    "tools": "python3 bridge/jarvis_bridge.py --list-tools",
+    "demo": "python3 bridge/jarvis_bridge.py --root . --host 0.0.0.0 --port 3000 --dry-run --assume-installed --no-token"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.1"
+  }
+}
